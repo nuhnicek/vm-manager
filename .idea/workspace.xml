@@ -4,7 +4,18 @@
     <option name="autoReloadType" value="ALL" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="f4ea390e-2438-48b1-ba30-87df6a605020" name="Changes" comment="" />
+    <list default="true" id="f4ea390e-2438-48b1-ba30-87df6a605020" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/package-lock.json" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/package-lock.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/package.json" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/package.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/package.json.md5" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/package.json.md5" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/App.css" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/App.css" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/App.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/App.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/tsconfig.json" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/tsconfig.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/wailsjs/runtime/package.json" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/wailsjs/runtime/package.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/wailsjs/runtime/runtime.d.ts" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/wailsjs/runtime/runtime.d.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/wailsjs/runtime/runtime.js" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/wailsjs/runtime/runtime.js" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -14,25 +25,41 @@
   <component name="Git.Settings">
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
+  <component name="GitHubPullRequestSearchHistory">{
+  &quot;lastFilter&quot;: {
+    &quot;state&quot;: &quot;OPEN&quot;,
+    &quot;assignee&quot;: &quot;nuhnicek&quot;
+  }
+}</component>
+  <component name="GithubPullRequestsUISettings">{
+  &quot;selectedUrlAndAccountId&quot;: {
+    &quot;url&quot;: &quot;https://github.com/nuhnicek/vm-manager.git&quot;,
+    &quot;accountId&quot;: &quot;626737ce-79bc-4752-90b4-b188bebadec8&quot;
+  }
+}</component>
+  <component name="McpProjectServerCommands">
+    <commands />
+    <urls />
+  </component>
   <component name="NextEditCompletionFeaturesState">
     <decayedCancelled>
-      <entry key="MS100" value="1.57375028442901" />
-      <entry key="MS500" value="4.522509755328558" />
-      <entry key="S2" value="8.79695987337886" />
-      <entry key="S5" value="10.530284154517501" />
-      <entry key="S10" value="11.290716830242609" />
-      <entry key="S30" value="12.895663380402453" />
-      <entry key="S60" value="14.275944142628" />
-      <entry key="M2" value="15.404018801179197" />
-      <entry key="M5" value="16.29397253655634" />
-      <entry key="M10" value="16.634592078412588" />
-      <entry key="M15" value="16.75355067157789" />
-      <entry key="M30" value="16.87533017813811" />
-      <entry key="H1" value="16.937405396162" />
-      <entry key="H2" value="17.101569083451807" />
-      <entry key="H4" value="21.696972101128974" />
-      <entry key="D1" value="109.1422547447794" />
-      <entry key="W1" value="170.39920938234388" />
+      <entry key="MS100" value="1.6932492238934116" />
+      <entry key="MS500" value="2.98717298594078" />
+      <entry key="S2" value="6.320854265737379" />
+      <entry key="S5" value="8.624276846651615" />
+      <entry key="S10" value="9.70579316182762" />
+      <entry key="S30" value="10.542398887399273" />
+      <entry key="S60" value="10.767749473488847" />
+      <entry key="M2" value="10.882998516022495" />
+      <entry key="M5" value="10.952991627588732" />
+      <entry key="M10" value="10.99416170580833" />
+      <entry key="M15" value="11.268156995873069" />
+      <entry key="M30" value="15.544024394882037" />
+      <entry key="H1" value="29.224608510219696" />
+      <entry key="H2" value="47.542789839511705" />
+      <entry key="H4" value="65.93144047537992" />
+      <entry key="D1" value="166.8574681490784" />
+      <entry key="W1" value="235.53480242388633" />
     </decayedCancelled>
     <decayedSelected>
       <entry key="MS100" value="0.0" />
@@ -54,23 +81,23 @@
       <entry key="W1" value="0.0" />
     </decayedSelected>
     <decayedShown>
-      <entry key="MS100" value="1.3007515409173633" />
-      <entry key="MS500" value="4.381255416578782" />
-      <entry key="S2" value="8.74967254627553" />
-      <entry key="S5" value="10.50985407035626" />
-      <entry key="S10" value="11.280191081997438" />
-      <entry key="S30" value="12.891954803031629" />
-      <entry key="S60" value="14.274006096299683" />
-      <entry key="M2" value="15.403015683163494" />
-      <entry key="M5" value="16.29356054514978" />
-      <entry key="M10" value="16.634384027738815" />
-      <entry key="M15" value="16.75341149275445" />
-      <entry key="M30" value="16.875260343887096" />
-      <entry key="H1" value="16.937370416398462" />
-      <entry key="H2" value="17.10155135919252" />
-      <entry key="H4" value="21.696959456646084" />
-      <entry key="D1" value="109.14224058630117" />
-      <entry key="W1" value="170.39920615258936" />
+      <entry key="MS100" value="1.6314203660805542" />
+      <entry key="MS500" value="2.8296662681652847" />
+      <entry key="S2" value="6.1275382045252025" />
+      <entry key="S5" value="8.515066906735507" />
+      <entry key="S10" value="9.644421324927752" />
+      <entry key="S30" value="10.520273910838737" />
+      <entry key="S60" value="10.756467426414426" />
+      <entry key="M2" value="10.877301736492873" />
+      <entry key="M5" value="10.950699421755866" />
+      <entry key="M10" value="10.993012898396643" />
+      <entry key="M15" value="11.267386188277179" />
+      <entry key="M30" value="15.543603483169028" />
+      <entry key="H1" value="29.224341780468045" />
+      <entry key="H2" value="47.542618948965945" />
+      <entry key="H4" value="65.93133685856665" />
+      <entry key="D1" value="166.8574364062923" />
+      <entry key="W1" value="235.5347965197283" />
     </decayedShown>
   </component>
   <component name="ProjectColorInfo">{
@@ -95,13 +122,13 @@
     &quot;RunOnceActivity.go.modules.go.list.on.any.changes.was.set&quot;: &quot;true&quot;,
     &quot;RunOnceActivity.typescript.service.memoryLimit.init&quot;: &quot;true&quot;,
     &quot;codeWithMe.voiceChat.enabledByDefault&quot;: &quot;false&quot;,
-    &quot;git-widget-placeholder&quot;: &quot;master&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;main&quot;,
     &quot;last_opened_file_path&quot;: &quot;/Users/beunier&quot;,
     &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
     &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
     &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
     &quot;onboarding.tips.debug.path&quot;: &quot;/Users/beunier/GolandProjects/lab411-vm-manager/main.go&quot;,
-    &quot;ts.external.directory.path&quot;: &quot;/Users/beunier/GolandProjects/lab411-vm-manager/frontend/node_modules/typescript/lib&quot;
+    &quot;ts.external.directory.path&quot;: &quot;/Users/beunier/GolandProjects/lab411-vm-manager/frontend/node_modules/@typescript/typescript-darwin-arm64/lib&quot;
   }
 }</component>
   <component name="RunManager">

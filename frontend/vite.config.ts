@@ -3,5 +3,19 @@ import react from '@vitejs/plugin-react'
 
 // https://vitejs.dev/config/
 export default defineConfig({
-  plugins: [react()]
+  plugins: [react()],
+  build: {
+    target: 'esnext'
+  },
+  optimizeDeps: {
+    exclude: ['@novnc/novnc']
+  },
+  server: {
+    proxy: {
+      '/auth': 'http://localhost:8080',
+      '/ping': 'http://localhost:8080',
+      '/vms': 'http://localhost:8080',
+    }
+  }
 })
+

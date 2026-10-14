@@ -22,20 +22,40 @@ export function DisconnectVMs(arg1, arg2) {
   return window['go']['main']['App']['DisconnectVMs'](arg1, arg2);
 }
 
+export function GetBackendURL() {
+  return window['go']['main']['App']['GetBackendURL']();
+}
+
+export function GetConsoleParams() {
+  return window['go']['main']['App']['GetConsoleParams']();
+}
+
 export function GetLaunchedConsoleVM() {
   return window['go']['main']['App']['GetLaunchedConsoleVM']();
 }
 
-export function GetTemplates() {
-  return window['go']['main']['App']['GetTemplates']();
+export function GetTemplates(arg1) {
+  return window['go']['main']['App']['GetTemplates'](arg1);
 }
 
-export function GetVMs() {
-  return window['go']['main']['App']['GetVMs']();
+export function GetVMs(arg1) {
+  return window['go']['main']['App']['GetVMs'](arg1);
+}
+
+export function Login(arg1, arg2) {
+  return window['go']['main']['App']['Login'](arg1, arg2);
+}
+
+export function Logout() {
+  return window['go']['main']['App']['Logout']();
 }
 
 export function OpenConsole(arg1) {
   return window['go']['main']['App']['OpenConsole'](arg1);
+}
+
+export function RemoveNIC(arg1, arg2) {
+  return window['go']['main']['App']['RemoveNIC'](arg1, arg2);
 }
 
 export function ResizePTY(arg1, arg2) {
@@ -52,6 +72,10 @@ export function StartVM(arg1) {
 
 export function StopVM(arg1) {
   return window['go']['main']['App']['StopVM'](arg1);
+}
+
+export function VerifySession(arg1) {
+  return window['go']['main']['App']['VerifySession'](arg1);
 }
 
 export function WritePTY(arg1) {

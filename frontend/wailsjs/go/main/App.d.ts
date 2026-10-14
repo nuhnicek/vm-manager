@@ -12,13 +12,23 @@ export function DeleteVM(arg1:string):Promise<string>;
 
 export function DisconnectVMs(arg1:string,arg2:string):Promise<string>;
 
+export function GetBackendURL():Promise<string>;
+
+export function GetConsoleParams():Promise<Record<string, string>>;
+
 export function GetLaunchedConsoleVM():Promise<string>;
 
-export function GetTemplates():Promise<Array<main.Template>>;
+export function GetTemplates(arg1:string):Promise<Array<main.Template>>;
 
-export function GetVMs():Promise<Array<main.VM>>;
+export function GetVMs(arg1:string):Promise<Array<main.VM>>;
+
+export function Login(arg1:string,arg2:string):Promise<main.AuthResult>;
+
+export function Logout():Promise<void>;
 
 export function OpenConsole(arg1:string):Promise<string>;
+
+export function RemoveNIC(arg1:string,arg2:string):Promise<string>;
 
 export function ResizePTY(arg1:number,arg2:number):Promise<void>;
 
@@ -27,5 +37,7 @@ export function StartPTY():Promise<void>;
 export function StartVM(arg1:string):Promise<string>;
 
 export function StopVM(arg1:string):Promise<string>;
+
+export function VerifySession(arg1:string):Promise<boolean>;
 
 export function WritePTY(arg1:string):Promise<void>;

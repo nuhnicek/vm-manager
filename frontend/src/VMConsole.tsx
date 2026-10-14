@@ -1,28 +1,144 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Terminal } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
-import { StartPTY, WritePTY, ResizePTY } from '../wailsjs/go/main/App';
-import { EventsOn, EventsOff } from '../wailsjs/runtime/runtime';
+import RFB from '@novnc/novnc';
+import { GetBackendURL } from '../wailsjs/go/main/App';
 import '@xterm/xterm/css/xterm.css';
 
 interface VMConsoleProps {
+    vmId?: string | number;
     vmName: string;
+    token?: string;
     onClose: () => void;
+    onPopOut?: () => void;
 }
 
-export function VMConsole({ vmName, onClose }: VMConsoleProps) {
+async function resolveWebSocketUrl(vmId: string | number, tokenOverride: string | undefined, endpoint: 'vnc' | 'ws'): Promise<string> {
+    const token = tokenOverride || localStorage.getItem('vm_manager_token') || '';
+    let backendUrl = 'http://localhost:8080';
+    if (typeof window !== 'undefined' && (window as any).go?.main?.App?.GetBackendURL) {
+        try {
+            const configured = await GetBackendURL();
+            if (configured) {
+                backendUrl = configured;
+            }
+        } catch {
+            // fallback to default
+        }
+    }
+
+    const wsProto = backendUrl.startsWith('https') ? 'wss:' : 'ws:';
+    const host = backendUrl.replace(/^https?:\/\//, '');
+    return `${wsProto}//${host}/vms/console/${endpoint}?vmid=${encodeURIComponent(String(vmId))}&token=${encodeURIComponent(token)}`;
+}
+
+export function VMConsole({ vmId, vmName, token, onClose, onPopOut }: VMConsoleProps) {
+    const [consoleMode, setConsoleMode] = useState<'vnc' | 'serial'>('vnc');
+    const [status, setStatus] = useState<'connecting' | 'connected' | 'disconnected' | 'error'>('connecting');
+    const [statusMessage, setStatusMessage] = useState<string>('Initializing console...');
+    const [connectAttempt, setConnectAttempt] = useState(0);
+
+    const vncContainerRef = useRef<HTMLDivElement>(null);
     const terminalRef = useRef<HTMLDivElement>(null);
 
+    // VNC Display Mode Effect
     useEffect(() => {
-        if (!terminalRef.current) return;
+        if (consoleMode !== 'vnc' || !vncContainerRef.current) return;
+
+        let rfb: any = null;
+        let isDisposed = false;
+
+        const connectVNC = async () => {
+            if (!vmId) {
+                setStatus('error');
+                setStatusMessage('VM ID is missing');
+                return;
+            }
+
+            try {
+                setStatus('connecting');
+                setStatusMessage('Connecting to VM Display (VNC)...');
+
+                const vncUrl = await resolveWebSocketUrl(vmId, token, 'vnc');
+                if (isDisposed) return;
+
+                // Clear previous canvas if any
+                if (!vncContainerRef.current) return;
+                vncContainerRef.current.innerHTML = '';
+
+                rfb = new RFB(vncContainerRef.current, vncUrl, {
+                    wsProtocols: ['binary'],
+                });
+
+                rfb.scaleViewport = true;
+                rfb.resizeSession = false;
+                rfb.clipViewport = true;
+
+                rfb.addEventListener('connect', () => {
+                    if (isDisposed) return;
+                    setStatus('connected');
+                    setStatusMessage(`Connected to ${vmName} Display`);
+                    if (rfb.focus) rfb.focus();
+                });
+
+                rfb.addEventListener('disconnect', (e: any) => {
+                    if (isDisposed) return;
+                    setStatus('disconnected');
+                    const reason = e?.detail?.clean ? '' : (e?.detail?.reason ? ` (${e.detail.reason})` : '');
+                    setStatusMessage(`Display disconnected${reason}`);
+                });
+
+                rfb.addEventListener('securityfailure', (e: any) => {
+                    if (isDisposed) return;
+                    setStatus('error');
+                    setStatusMessage(`Security handshake failed: ${e?.detail?.reason || 'authentication error'}`);
+                });
+
+                rfb.addEventListener('credentialsrequired', () => {
+                    if (rfb && rfb.sendCredentials) {
+                        rfb.sendCredentials({ password: '' });
+                    }
+                });
+            } catch (err: any) {
+                if (isDisposed) return;
+                setStatus('error');
+                setStatusMessage(`Connection failed: ${err?.message || err}`);
+            }
+        };
+
+        connectVNC();
+
+        return () => {
+            isDisposed = true;
+            if (rfb) {
+                try {
+                    rfb.disconnect();
+                } catch {}
+            }
+            if (vncContainerRef.current) {
+                vncContainerRef.current.innerHTML = '';
+            }
+        };
+    }, [consoleMode, vmId, vmName, token, connectAttempt]);
+
+    // Serial Terminal Mode Effect
+    useEffect(() => {
+        if (consoleMode !== 'serial' || !terminalRef.current) return;
+
+        let ws: WebSocket | null = null;
+        let isDisposed = false;
 
         const term = new Terminal({
             theme: {
-                background: '#000000',
-                foreground: '#ffffff',
+                background: '#0a0f1d',
+                foreground: '#f1f5f9',
+                cursor: '#38bdf8',
+                selectionBackground: '#334155',
             },
             cursorBlink: true,
             fontFamily: 'Menlo, Monaco, "Courier New", monospace',
+            fontSize: 13,
+            lineHeight: 1.25,
         });
 
         const fitAddon = new FitAddon();
@@ -31,53 +147,278 @@ export function VMConsole({ vmName, onClose }: VMConsoleProps) {
         term.open(terminalRef.current);
         fitAddon.fit();
 
-        term.writeln(`\x1b[32mConnecting to real console for ${vmName}...\x1b[0m`);
+        term.writeln(`\x1b[36mInitializing Serial Terminal for ${vmName} (VMID: ${vmId})...\x1b[0m\r\n`);
 
-        // Handle incoming data from PTY
-        EventsOn("pty-data", (data: string) => {
-            term.write(data);
-        });
+        const connectSerial = async () => {
+            if (!vmId) {
+                term.writeln(`\x1b[31mError: VM ID is missing\x1b[0m\r\n`);
+                setStatus('error');
+                setStatusMessage('VM ID is missing');
+                return;
+            }
 
-        // Send user input to PTY
-        term.onData((data) => {
-            WritePTY(data);
-        });
+            try {
+                setStatus('connecting');
+                setStatusMessage('Connecting to serial console...');
+                const wsUrl = await resolveWebSocketUrl(vmId, token, 'ws');
+                ws = new WebSocket(wsUrl);
+                ws.binaryType = 'arraybuffer';
 
-        // Start the PTY backend
-        StartPTY().then(() => {
-            // After starting, send initial resize
-            ResizePTY(term.rows, term.cols);
-        }).catch(err => {
-            term.writeln(`\r\n\x1b[31mFailed to start PTY: ${err}\x1b[0m`);
-        });
+                ws.onopen = () => {
+                    if (isDisposed) return;
+                    setStatus('connected');
+                    setStatusMessage(`Connected to serial terminal`);
+                    term.writeln(`\x1b[32m✔ Connected to serial terminal for ${vmName}\x1b[0m\r\n`);
+                };
 
-        // Handle terminal resize
-        term.onResize((size) => {
-            ResizePTY(size.rows, size.cols);
-        });
+                ws.onmessage = (event) => {
+                    if (isDisposed) return;
+                    if (event.data instanceof ArrayBuffer) {
+                        term.write(new Uint8Array(event.data));
+                    } else if (typeof event.data === 'string') {
+                        term.write(event.data);
+                    }
+                };
+
+                ws.onerror = () => {
+                    if (isDisposed) return;
+                    setStatus('error');
+                    setStatusMessage('Serial connection error');
+                    term.writeln(`\r\n\x1b[31m[WebSocket connection error]\x1b[0m\r\n`);
+                };
+
+                ws.onclose = (event) => {
+                    if (isDisposed) return;
+                    setStatus('disconnected');
+                    const reason = event.reason ? `: ${event.reason}` : '';
+                    setStatusMessage(`Serial disconnected${reason}`);
+                    term.writeln(`\r\n\x1b[33m[Console disconnected${reason}]\x1b[0m\r\n`);
+                };
+
+                term.onData((data) => {
+                    if (ws && ws.readyState === WebSocket.OPEN) {
+                        ws.send(data);
+                    }
+                });
+            } catch (err: any) {
+                if (isDisposed) return;
+                setStatus('error');
+                setStatusMessage(`Connection error: ${err?.message || err}`);
+                term.writeln(`\r\n\x1b[31m[Connection error: ${err}]\x1b[0m\r\n`);
+            }
+        };
+
+        connectSerial();
 
         const handleResize = () => {
-            fitAddon.fit();
+            try {
+                fitAddon.fit();
+            } catch {}
         };
         window.addEventListener('resize', handleResize);
 
         return () => {
+            isDisposed = true;
             window.removeEventListener('resize', handleResize);
-            EventsOff("pty-data");
+            if (ws) {
+                try {
+                    ws.close();
+                } catch {}
+            }
             term.dispose();
         };
-    }, [vmName]);
+    }, [consoleMode, vmId, vmName, token, connectAttempt]);
 
     return (
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: '#000', zIndex: 9999, display: 'flex', flexDirection: 'column' }}>
-            <div style={{ backgroundColor: '#1f2937', padding: '12px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <h3 style={{ margin: 0, color: 'white', fontSize: '16px', fontWeight: 'normal' }}>Console - {vmName}</h3>
-                <button className="btn btn-secondary btn-sm" onClick={onClose} style={{ padding: '4px 12px' }}>Close Console</button>
+        <div style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: '#0a0f1d',
+            zIndex: 9999,
+            display: 'flex',
+            flexDirection: 'column'
+        }}>
+            {/* Top Toolbar */}
+            <div style={{
+                backgroundColor: '#1e293b',
+                color: '#f8fafc',
+                padding: '8px 16px',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                borderBottom: '1px solid #334155',
+                userSelect: 'none'
+            }}>
+                {/* Title & Mode Switcher */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <div style={{ fontWeight: 600, fontSize: '14px', letterSpacing: '0.02em' }}>
+                        🖥️ {vmName} <span style={{ opacity: 0.6, fontSize: '12px' }}>({vmId ? `VMID: ${vmId}` : 'Console'})</span>
+                    </div>
+
+                    <div style={{
+                        display: 'flex',
+                        backgroundColor: '#0f172a',
+                        borderRadius: '6px',
+                        padding: '2px',
+                        border: '1px solid #334155'
+                    }}>
+                        <button
+                            type="button"
+                            onClick={() => setConsoleMode('vnc')}
+                            style={{
+                                padding: '4px 10px',
+                                fontSize: '12px',
+                                fontWeight: 600,
+                                borderRadius: '4px',
+                                border: 'none',
+                                cursor: 'pointer',
+                                backgroundColor: consoleMode === 'vnc' ? '#2563eb' : 'transparent',
+                                color: consoleMode === 'vnc' ? '#ffffff' : '#94a3b8',
+                                transition: 'all 0.15s ease'
+                            }}
+                            title="Graphical Screen (works for EVE-NG, Windows, and all VMs)"
+                        >
+                            Display (Screen)
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setConsoleMode('serial')}
+                            style={{
+                                padding: '4px 10px',
+                                fontSize: '12px',
+                                fontWeight: 600,
+                                borderRadius: '4px',
+                                border: 'none',
+                                cursor: 'pointer',
+                                backgroundColor: consoleMode === 'serial' ? '#2563eb' : 'transparent',
+                                color: consoleMode === 'serial' ? '#ffffff' : '#94a3b8',
+                                transition: 'all 0.15s ease'
+                            }}
+                            title="Text Serial Terminal (for Linux serial gettys)"
+                        >
+                            Serial Terminal
+                        </button>
+                    </div>
+
+                    {/* Status Pill */}
+                    <div style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        fontSize: '11px',
+                        backgroundColor: '#0f172a',
+                        padding: '3px 8px',
+                        borderRadius: '12px',
+                        border: '1px solid #334155'
+                    }}>
+                        <span style={{
+                            width: '8px',
+                            height: '8px',
+                            borderRadius: '50%',
+                            backgroundColor:
+                                status === 'connected' ? '#22c55e' :
+                                status === 'connecting' ? '#eab308' :
+                                '#ef4444'
+                        }} />
+                        <span style={{ textTransform: 'capitalize' }}>{status}</span>
+                    </div>
+
+                    <span style={{ fontSize: '11px', color: '#94a3b8' }}>
+                        {statusMessage}
+                    </span>
+                </div>
+
+                {/* Right Action Controls */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <button
+                        type="button"
+                        onClick={() => setConnectAttempt(prev => prev + 1)}
+                        style={{
+                            padding: '4px 10px',
+                            fontSize: '12px',
+                            backgroundColor: '#334155',
+                            color: '#f8fafc',
+                            border: '1px solid #475569',
+                            borderRadius: '4px',
+                            cursor: 'pointer'
+                        }}
+                        title="Reconnect to VM"
+                    >
+                        ↻ Reconnect
+                    </button>
+
+                    {onPopOut && (
+                        <button
+                            type="button"
+                            onClick={onPopOut}
+                            style={{
+                                padding: '4px 10px',
+                                fontSize: '12px',
+                                backgroundColor: '#0284c7',
+                                color: '#ffffff',
+                                border: 'none',
+                                borderRadius: '4px',
+                                cursor: 'pointer',
+                                fontWeight: 500
+                            }}
+                            title="Open in standalone window"
+                        >
+                            ↗ Pop Out
+                        </button>
+                    )}
+
+                    <button
+                        type="button"
+                        onClick={onClose}
+                        style={{
+                            padding: '4px 12px',
+                            fontSize: '14px',
+                            backgroundColor: '#ef4444',
+                            color: '#ffffff',
+                            border: 'none',
+                            borderRadius: '4px',
+                            cursor: 'pointer',
+                            fontWeight: 'bold'
+                        }}
+                        title="Close console"
+                    >
+                        ✕
+                    </button>
+                </div>
             </div>
-            <div 
-                ref={terminalRef} 
-                style={{ flex: 1, overflow: 'hidden', padding: '8px' }} 
-            />
+
+            {/* Display / Console Body */}
+            <div style={{ flex: 1, position: 'relative', overflow: 'hidden', backgroundColor: '#000000' }}>
+                {/* VNC Mode Container */}
+                <div
+                    ref={vncContainerRef}
+                    tabIndex={0}
+                    style={{
+                        display: consoleMode === 'vnc' ? 'flex' : 'none',
+                        width: '100%',
+                        height: '100%',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        outline: 'none',
+                        overflow: 'hidden'
+                    }}
+                />
+
+                {/* Serial Terminal Mode Container */}
+                <div
+                    ref={terminalRef}
+                    style={{
+                        display: consoleMode === 'serial' ? 'block' : 'none',
+                        width: '100%',
+                        height: '100%',
+                        padding: '8px',
+                        boxSizing: 'border-box'
+                    }}
+                />
+            </div>
         </div>
     );
 }

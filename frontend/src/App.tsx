@@ -1,435 +1,566 @@
 import { useState, useEffect } from 'react';
 import { 
     GetVMs, GetTemplates, StartVM, StopVM, DeleteVM, CreateVMFromTemplate, 
-    GetLaunchedConsoleVM, OpenConsole, ConnectVMs, DisconnectVMs 
+    GetLaunchedConsoleVM, GetConsoleParams, OpenConsole, ConnectVMs, DisconnectVMs, AddNIC, RemoveNIC,
+    VerifySession, Logout
 } from '../wailsjs/go/main/App';
 import { main } from '../wailsjs/go/models';
 import { VMConsole } from './VMConsole';
 import { Quit } from '../wailsjs/runtime/runtime';
+
+import { Header } from './components/Header';
+import { Login } from './components/Login';
+import { CreateVMCard } from './components/CreateVMCard';
+import { VMTable } from './components/VMTable';
+import { NetworkingModal } from './components/NetworkingModal';
+import { NetworkTopologyModal } from './components/NetworkTopologyModal';
+import { ConfirmModal } from './components/ConfirmModal';
+
 import './App.css';
 
 function App() {
-    const [launchedConsoleVM, setLaunchedConsoleVM] = useState<string>("");
+    const [launchedConsoleVM, setLaunchedConsoleVM] = useState<string>('');
 
-    // Auth state
+    // Authentication State
     const [isAuthenticated, setIsAuthenticated] = useState(false);
-    const [username, setUsername] = useState("");
-    const [password, setPassword] = useState("");
-    const [loginError, setLoginError] = useState("");
+    const [isVerifyingSession, setIsVerifyingSession] = useState(true);
+    const [currentUser, setCurrentUser] = useState<string>('');
+    const [authToken, setAuthToken] = useState<string>('');
 
+    // VM and Template Data State
     const [vms, setVms] = useState<main.VM[]>([]);
     const [templates, setTemplates] = useState<main.Template[]>([]);
-    const [message, setMessage] = useState("");
-    
-    const [newName, setNewName] = useState("");
-    const [selectedTemplate, setSelectedTemplate] = useState("");
-    
-    // Connection Management Modal State
-    const [managingConnectionsVM, setManagingConnectionsVM] = useState<main.VM | null>(null);
-    const [connectionTargetId, setConnectionTargetId] = useState<string>("");
+    const [isRefreshing, setIsRefreshing] = useState(false);
+    const [message, setMessage] = useState('');
 
-    // Custom confirm dialog state
+    // Modal States
+    const [managingConnectionsVM, setManagingConnectionsVM] = useState<main.VM | null>(null);
+    const [activeConsoleVM, setActiveConsoleVM] = useState<main.VM | null>(null);
+    const [launchedConsoleParams, setLaunchedConsoleParams] = useState<Record<string, string> | null>(null);
+    const [showNetworkMap, setShowNetworkMap] = useState<boolean>(false);
     const [confirmDialog, setConfirmDialog] = useState<{
         isOpen: boolean;
         message: string;
         onConfirm: () => void;
     }>({
         isOpen: false,
-        message: "",
+        message: '',
         onConfirm: () => {}
     });
 
+    // Check if app was launched in console window mode
     useEffect(() => {
         const checkLaunchedConsole = async () => {
             try {
+                if (typeof window !== 'undefined' && (window as any).go?.main?.App?.GetConsoleParams) {
+                    const params = await GetConsoleParams();
+                    if (params && (params.id || params.name)) {
+                        setLaunchedConsoleParams(params);
+                        setLaunchedConsoleVM(params.name || params.id);
+                        if (params.token) {
+                            setAuthToken(params.token);
+                        }
+                        return;
+                    }
+                }
                 const consoleVM = await GetLaunchedConsoleVM();
                 if (consoleVM) {
                     setLaunchedConsoleVM(consoleVM);
                 }
             } catch (err) {
-                console.error("Failed to check launched console VM", err);
+                console.error('Failed to check launched console VM:', err);
             }
         };
         checkLaunchedConsole();
     }, []);
 
-    const fetchVMs = async () => {
-        const data = await GetVMs();
-        setVms(data);
-    };
+    // Restore saved session on startup
+    useEffect(() => {
+        const restoreSession = async () => {
+            const savedToken = localStorage.getItem('vm_manager_token');
+            const savedEmail = localStorage.getItem('vm_manager_email');
+            if (savedToken) {
+                try {
+                    let isValid = false;
+                    if (typeof window !== 'undefined' && (window as any).go?.main?.App?.VerifySession) {
+                        isValid = await VerifySession(savedToken);
+                    } else {
+                        const resp = await fetch('/ping', {
+                            headers: { 'Authorization': savedToken }
+                        }).catch(async () => {
+                            return await fetch('http://localhost:8080/ping', {
+                                headers: { 'Authorization': savedToken }
+                            });
+                        });
+                        isValid = !!resp && resp.status === 200;
+                    }
 
-    const fetchTemplates = async () => {
-        const data = await GetTemplates();
-        setTemplates(data);
-        if (data && data.length > 0) {
-            setSelectedTemplate(data[0].id);
-        }
-    };
+                    if (isValid) {
+                        setIsAuthenticated(true);
+                        setAuthToken(savedToken);
+                        setCurrentUser(savedEmail || '');
+                        await fetchVMs(savedToken);
+                        await fetchTemplates(savedToken);
+                    } else {
+                        localStorage.removeItem('vm_manager_token');
+                        localStorage.removeItem('vm_manager_email');
+                    }
+                } catch {
+                    localStorage.removeItem('vm_manager_token');
+                    localStorage.removeItem('vm_manager_email');
+                }
+            }
+            setIsVerifyingSession(false);
+        };
+        restoreSession();
+    }, []);
 
-    // Keep the managing VM state up-to-date if vms change
+    // Keep managingConnectionsVM reference in sync with latest vms
     useEffect(() => {
         if (managingConnectionsVM) {
-            const updatedVM = vms.find(v => v.id === managingConnectionsVM.id);
-            if (updatedVM) {
-                setManagingConnectionsVM(updatedVM);
-            } else {
-                setManagingConnectionsVM(null); // was deleted
-            }
+            const updatedVM = vms.find(v => String(v.id) === String(managingConnectionsVM.id));
+            setManagingConnectionsVM(updatedVM || null);
         }
     }, [vms]);
 
-    useEffect(() => {
-        if (isAuthenticated) {
-            fetchVMs();
-            fetchTemplates();
-        }
-    }, [isAuthenticated]);
-
-    const handleLogin = (e: React.FormEvent) => {
-        e.preventDefault();
-        // Mock authentication
-        if (username === "admin" && password === "password") {
-            setIsAuthenticated(true);
-            setLoginError("");
-        } else {
-            setLoginError("Invalid username or password. Try admin/password.");
-        }
-    };
-
-    const handleLogout = () => {
-        setIsAuthenticated(false);
-        setUsername("");
-        setPassword("");
-        setMessage("");
-    };
-
-    const executeAction = async (actionFn: any, id: string) => {
+    // Data Fetching
+    const fetchVMs = async (tokenOverride?: string) => {
+        const token = tokenOverride || authToken || localStorage.getItem('vm_manager_token') || '';
+        if (!token) return;
+        setIsRefreshing(true);
         try {
-            const result = await actionFn(id);
-            setMessage(result);
-            await fetchVMs(); // Refresh the list
-        } catch (error) {
-            setMessage(`Error: ${error}`);
-        }
-    };
-
-    const handleAction = (actionFn: any, id: string, name: string, needsConfirm: boolean, confirmMsg: string) => {
-        if (needsConfirm) {
-            setConfirmDialog({
-                isOpen: true,
-                message: confirmMsg,
-                onConfirm: () => {
-                    setConfirmDialog({ ...confirmDialog, isOpen: false });
-                    executeAction(actionFn, id);
+            let data: main.VM[] = [];
+            if (typeof window !== 'undefined' && (window as any).go?.main?.App?.GetVMs) {
+                data = await GetVMs(token);
+            } else {
+                let resp: Response;
+                try {
+                    resp = await fetch('/vms', {
+                        headers: { 'Authorization': token }
+                    });
+                } catch {
+                    resp = await fetch('http://localhost:8080/vms', {
+                        headers: { 'Authorization': token }
+                    });
                 }
-            });
-        } else {
-            executeAction(actionFn, id);
+                if (resp && resp.ok) {
+                    data = await resp.json();
+                } else if (resp && resp.status === 401) {
+                    handleLogout();
+                    return;
+                }
+            }
+            setVms(data || []);
+        } catch (err) {
+            console.error('Failed to fetch VMs:', err);
+        } finally {
+            setIsRefreshing(false);
         }
     };
 
-    const handleCreate = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!newName.trim()) {
-            setMessage("Error: VM name cannot be empty");
+    const fetchTemplates = async (tokenOverride?: string) => {
+        const token = tokenOverride || authToken || localStorage.getItem('vm_manager_token') || '';
+        if (!token) return;
+        try {
+            let data: main.Template[] = [];
+            if (typeof window !== 'undefined' && (window as any).go?.main?.App?.GetTemplates) {
+                data = await GetTemplates(token);
+            } else {
+                let resp: Response;
+                try {
+                    resp = await fetch('/vms/templates', {
+                        headers: { 'Authorization': token }
+                    });
+                } catch {
+                    resp = await fetch('http://localhost:8080/vms/templates', {
+                        headers: { 'Authorization': token }
+                    });
+                }
+                if (resp && resp.ok) {
+                    data = await resp.json();
+                }
+            }
+            setTemplates(data || []);
+        } catch (err) {
+            console.error('Failed to fetch templates:', err);
+        }
+    };
+
+    // Auth Handlers
+    const handleLoginSuccess = async (token: string, userEmail: string) => {
+        localStorage.setItem('vm_manager_token', token);
+        localStorage.setItem('vm_manager_email', userEmail);
+        setAuthToken(token);
+        setCurrentUser(userEmail);
+        setIsAuthenticated(true);
+        await fetchVMs(token);
+        await fetchTemplates(token);
+    };
+
+    const handleLogout = async () => {
+        try {
+            if (typeof window !== 'undefined' && (window as any).go?.main?.App?.Logout) {
+                await Logout();
+            }
+        } catch (e) {
+            console.error('Logout error:', e);
+        }
+        localStorage.removeItem('vm_manager_token');
+        localStorage.removeItem('vm_manager_email');
+        setIsAuthenticated(false);
+        setAuthToken('');
+        setCurrentUser('');
+        setMessage('');
+        setVms([]);
+        setTemplates([]);
+    };
+
+    // Action Helpers
+    const executeAction = async (actionFn: (id: string) => Promise<string>, id: string, endpoint?: string) => {
+        try {
+            if (typeof window !== 'undefined' && (window as any).go?.main?.App) {
+                const result = await actionFn(id);
+                setMessage(result);
+            } else if (endpoint) {
+                const token = authToken || localStorage.getItem('vm_manager_token') || '';
+                const vmid = parseInt(id, 10);
+                const payload = { id: isNaN(vmid) ? id : vmid };
+                let resp = await fetch(endpoint, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': token },
+                    body: JSON.stringify(payload)
+                }).catch(async () => {
+                    return await fetch('http://localhost:8080' + endpoint, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'Authorization': token },
+                        body: JSON.stringify(payload)
+                    });
+                });
+                if (!resp || !resp.ok) {
+                    const errData = await resp?.json().catch(() => ({}));
+                    throw new Error(errData?.error || `Action failed with status ${resp ? resp.status : 'network error'}`);
+                }
+                setMessage(`Action completed successfully`);
+            }
+            await fetchVMs();
+        } catch (error: any) {
+            setMessage(`Error: ${error?.message || error}`);
+        }
+    };
+
+    const handleActionWithConfirm = (
+        actionFn: (id: string) => Promise<string>,
+        id: string,
+        confirmMsg: string,
+        endpoint?: string
+    ) => {
+        setConfirmDialog({
+            isOpen: true,
+            message: confirmMsg,
+            onConfirm: () => {
+                setConfirmDialog(prev => ({ ...prev, isOpen: false }));
+                executeAction(actionFn, id, endpoint);
+            }
+        });
+    };
+
+    // VM Operations
+    const handleStartVM = (id: string, _name: string) => {
+        executeAction(StartVM, id, '/vms/start');
+    };
+
+    const handleStopVM = (id: string, name: string) => {
+        handleActionWithConfirm(StopVM, id, `Are you sure you want to stop ${name}?`, '/vms/stop');
+    };
+
+    const handleDeleteVM = (id: string, name: string) => {
+        handleActionWithConfirm(DeleteVM, id, `Are you sure you want to DELETE ${name}? This action cannot be undone.`, '/vms/delete');
+    };
+
+    const handleOpenConsole = (id: string) => {
+        const targetVM = vms.find(v => String(v.id) === id);
+        if (!targetVM) {
+            setMessage(`Error: VM ${id} not found`);
+            return;
+        }
+        if (targetVM.status !== 'Running') {
+            setMessage(`Error: ${targetVM.name} is stopped. Start the VM first to open the console.`);
+            return;
+        }
+        setActiveConsoleVM(targetVM);
+    };
+
+    const handlePopOutConsole = async (id: string) => {
+        try {
+            if (typeof window !== 'undefined' && (window as any).go?.main?.App?.OpenConsole) {
+                await OpenConsole(id);
+                setActiveConsoleVM(null);
+            }
+        } catch (error) {
+            setMessage(`Error popping out console: ${error}`);
+        }
+    };
+
+    const handleCreateVM = async (name: string, templateId: string) => {
+        if (!name.trim()) {
+            setMessage('Error: VM name cannot be empty');
             return;
         }
         try {
-            await CreateVMFromTemplate(newName, selectedTemplate);
-            setMessage(`Successfully created VM: ${newName}`);
-            setNewName("");
+            if (typeof window !== 'undefined' && (window as any).go?.main?.App?.CreateVMFromTemplate) {
+                await CreateVMFromTemplate(name, templateId);
+            } else {
+                const token = authToken || localStorage.getItem('vm_manager_token') || '';
+                const templateNum = parseInt(templateId, 10);
+                const payload = {
+                    name,
+                    template_id: isNaN(templateNum) ? templateId : templateNum
+                };
+                let resp: Response;
+                try {
+                    resp = await fetch('/vms/create', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': token
+                        },
+                        body: JSON.stringify(payload)
+                    });
+                } catch {
+                    resp = await fetch('http://localhost:8080/vms/create', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': token
+                        },
+                        body: JSON.stringify(payload)
+                    });
+                }
+
+                if (!resp || !resp.ok) {
+                    throw new Error(`Creation failed with status ${resp ? resp.status : 'network error'}`);
+                }
+            }
+            setMessage(`Successfully created VM: ${name}`);
             await fetchVMs();
-        } catch (error) {
-            setMessage(`Error: ${error}`);
+        } catch (error: any) {
+            setMessage(`Error: ${error?.message || error}`);
         }
     };
 
-    const handleConnect = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!managingConnectionsVM || !connectionTargetId) return;
+    // Networking Operations
+    const handleAddNIC = async () => {
+        if (!managingConnectionsVM) return;
         try {
-            const result = await ConnectVMs(managingConnectionsVM.id, connectionTargetId);
-            setMessage(result);
-            setConnectionTargetId("");
+            if (typeof window !== 'undefined' && (window as any).go?.main?.App?.AddNIC) {
+                const result = await AddNIC(String(managingConnectionsVM.id));
+                setMessage(result);
+            } else {
+                const token = authToken || localStorage.getItem('vm_manager_token') || '';
+                const vmid = parseInt(String(managingConnectionsVM.id), 10);
+                const resp = await fetch('/vms/network/add-nic', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': token },
+                    body: JSON.stringify({ vmid })
+                }).catch(async () => {
+                    return await fetch('http://localhost:8080/vms/network/add-nic', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'Authorization': token },
+                        body: JSON.stringify({ vmid })
+                    });
+                });
+                if (!resp || !resp.ok) throw new Error('Failed to add NIC');
+                setMessage(`Added Virtual NIC to ${managingConnectionsVM.name}`);
+            }
             await fetchVMs();
-        } catch (error) {
-            setMessage(`Error: ${error}`);
+        } catch (error: any) {
+            setMessage(`Error: ${error?.message || error}`);
+        }
+    };
+
+    const handleRemoveNIC = async (nic: string) => {
+        if (!managingConnectionsVM) return;
+        try {
+            if (typeof window !== 'undefined' && (window as any).go?.main?.App?.RemoveNIC) {
+                const result = await RemoveNIC(String(managingConnectionsVM.id), nic);
+                setMessage(result);
+            } else {
+                const token = authToken || localStorage.getItem('vm_manager_token') || '';
+                const vmid = parseInt(String(managingConnectionsVM.id), 10);
+                const resp = await fetch('/vms/network/remove', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': token },
+                    body: JSON.stringify({ vmid, nic })
+                }).catch(async () => {
+                    return await fetch('http://localhost:8080/vms/network/remove', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'Authorization': token },
+                        body: JSON.stringify({ vmid, nic })
+                    });
+                });
+                if (!resp || !resp.ok) throw new Error('Failed to remove NIC');
+                setMessage(`Removed ${nic} from ${managingConnectionsVM.name}`);
+            }
+            await fetchVMs();
+        } catch (error: any) {
+            setMessage(`Error: ${error?.message || error}`);
+        }
+    };
+
+    const handleConnect = async (localNic: string, targetVmId: string, targetNic: string) => {
+        if (!managingConnectionsVM) return;
+        try {
+            if (typeof window !== 'undefined' && (window as any).go?.main?.App?.ConnectVMs) {
+                const result = await ConnectVMs(String(managingConnectionsVM.id), localNic, targetVmId, targetNic);
+                setMessage(result);
+            } else {
+                const token = authToken || localStorage.getItem('vm_manager_token') || '';
+                const vmid1 = parseInt(String(managingConnectionsVM.id), 10);
+                const vmid2 = parseInt(targetVmId, 10);
+                const resp = await fetch('/vms/network/create', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': token },
+                    body: JSON.stringify({ vmid1, vmid2, nic1: localNic, nic2: targetNic })
+                }).catch(async () => {
+                    return await fetch('http://localhost:8080/vms/network/create', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'Authorization': token },
+                        body: JSON.stringify({ vmid1, vmid2, nic1: localNic, nic2: targetNic })
+                    });
+                });
+                if (!resp || !resp.ok) throw new Error('Failed to connect VMs');
+                setMessage(`Connected ${managingConnectionsVM.name} to target VM`);
+            }
+            await fetchVMs();
+        } catch (error: any) {
+            setMessage(`Error: ${error?.message || error}`);
         }
     };
 
     const handleDisconnect = async (targetId: string) => {
         if (!managingConnectionsVM) return;
         try {
-            const result = await DisconnectVMs(managingConnectionsVM.id, targetId);
-            setMessage(result);
+            if (typeof window !== 'undefined' && (window as any).go?.main?.App?.DisconnectVMs) {
+                const result = await DisconnectVMs(String(managingConnectionsVM.id), targetId);
+                setMessage(result);
+            } else {
+                const token = authToken || localStorage.getItem('vm_manager_token') || '';
+                const vmid1 = parseInt(String(managingConnectionsVM.id), 10);
+                const vmid2 = parseInt(targetId, 10);
+                const resp = await fetch('/vms/network/disconnect', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': token },
+                    body: JSON.stringify({ vmid1, vmid2 })
+                }).catch(async () => {
+                    return await fetch('http://localhost:8080/vms/network/disconnect', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'Authorization': token },
+                        body: JSON.stringify({ vmid1, vmid2 })
+                    });
+                });
+                if (!resp || !resp.ok) throw new Error('Failed to disconnect VMs');
+                setMessage(`Disconnected ${managingConnectionsVM.name} from target VM`);
+            }
             await fetchVMs();
-        } catch (error) {
-            setMessage(`Error: ${error}`);
+        } catch (error: any) {
+            setMessage(`Error: ${error?.message || error}`);
         }
     };
 
+    // Console Mode
     if (launchedConsoleVM) {
         return (
-            <div style={{ height: '100vh', width: '100vw', backgroundColor: '#000', margin: 0, padding: 0 }}>
+            <div style={{ height: '100vh', width: '100vw', backgroundColor: '#0a0f1d', margin: 0, padding: 0 }}>
                 <VMConsole 
-                    vmName={launchedConsoleVM} 
+                    vmId={launchedConsoleParams?.id || launchedConsoleVM}
+                    vmName={launchedConsoleParams?.name || launchedConsoleVM}
+                    token={launchedConsoleParams?.token || authToken}
                     onClose={() => Quit()} 
                 />
             </div>
         );
     }
 
-    if (!isAuthenticated) {
+    // Session Verifying State
+    if (isVerifyingSession) {
         return (
             <div className="login-container">
-                <div className="card login-card">
-                    <h2 className="text-center">VM Manager Login</h2>
-                    {loginError && <div className="message error">{loginError}</div>}
-                    <form className="login-form" onSubmit={handleLogin}>
-                        <div className="form-group">
-                            <label>Username</label>
-                            <input 
-                                type="text" 
-                                value={username} 
-                                onChange={(e) => setUsername(e.target.value)} 
-                                placeholder="admin"
-                            />
-                        </div>
-                        <div className="form-group" style={{marginTop: '16px'}}>
-                            <label>Password</label>
-                            <input 
-                                type="password" 
-                                value={password} 
-                                onChange={(e) => setPassword(e.target.value)} 
-                                placeholder="password"
-                            />
-                        </div>
-                        <button type="submit" className="btn btn-primary login-btn">Login</button>
-                    </form>
+                <div className="card login-card" style={{ textAlign: 'center', padding: '36px 24px' }}>
+                    <p style={{ margin: 0, color: 'var(--text-muted)' }}>Verifying session...</p>
                 </div>
             </div>
         );
     }
 
-    // Prepare connection options
-    let availableVMsToConnect: main.VM[] = [];
-    if (managingConnectionsVM) {
-        availableVMsToConnect = vms.filter(v => 
-            v.id !== managingConnectionsVM.id && 
-            !(managingConnectionsVM.connections || []).some(c => c.target_vm_id === v.id)
-        );
+    // Login Form
+    if (!isAuthenticated) {
+        return <Login onLoginSuccess={handleLoginSuccess} />;
     }
 
+    // Main App View
     return (
         <div className="container">
-            {confirmDialog.isOpen && (
-                <div className="modal-overlay">
-                    <div className="modal-content">
-                        <h4>Confirmation</h4>
-                        <p>{confirmDialog.message}</p>
-                        <div className="modal-actions">
-                            <button 
-                                className="btn btn-secondary" 
-                                onClick={() => setConfirmDialog({ ...confirmDialog, isOpen: false })}
-                            >
-                                Cancel
-                            </button>
-                            <button 
-                                className="btn btn-danger" 
-                                onClick={confirmDialog.onConfirm}
-                            >
-                                Confirm
-                            </button>
-                        </div>
-                    </div>
-                </div>
+            <ConfirmModal 
+                isOpen={confirmDialog.isOpen}
+                message={confirmDialog.message}
+                onConfirm={confirmDialog.onConfirm}
+                onCancel={() => setConfirmDialog(prev => ({ ...prev, isOpen: false }))}
+            />
+
+            <NetworkingModal 
+                vm={managingConnectionsVM}
+                allVMs={vms}
+                onClose={() => setManagingConnectionsVM(null)}
+                onAddNIC={handleAddNIC}
+                onRemoveNIC={handleRemoveNIC}
+                onConnect={handleConnect}
+                onDisconnect={handleDisconnect}
+            />
+
+            <NetworkTopologyModal 
+                isOpen={showNetworkMap}
+                vms={vms}
+                onClose={() => setShowNetworkMap(false)}
+            />
+
+            {activeConsoleVM && (
+                <VMConsole 
+                    vmId={activeConsoleVM.id}
+                    vmName={activeConsoleVM.name}
+                    token={authToken}
+                    onClose={() => setActiveConsoleVM(null)}
+                    onPopOut={typeof window !== 'undefined' && (window as any).go?.main?.App?.OpenConsole ? () => handlePopOutConsole(String(activeConsoleVM.id)) : undefined}
+                />
             )}
 
-            {managingConnectionsVM && (
-                <div className="modal-overlay">
-                    <div className="modal-content" style={{ maxWidth: '600px' }}>
-                        <h4>Connections for {managingConnectionsVM.name}</h4>
-                        <p>Manage point-to-point links between VMs. Simulated via isolated bridges under the hood.</p>
-                        
-                        <div style={{ marginBottom: '1rem' }}>
-                            <h5>Current Links</h5>
-                            {(managingConnectionsVM.connections || []).length === 0 ? (
-                                <p className="text-muted">No connections yet.</p>
-                            ) : (
-                                <ul style={{ listStyleType: 'none', padding: 0 }}>
-                                    {(managingConnectionsVM.connections || []).map(conn => {
-                                        const cVm = vms.find(v => v.id === conn.target_vm_id);
-                                        return (
-                                            <li key={conn.target_vm_id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid #e5e7eb' }}>
-                                                <div style={{ fontFamily: 'monospace', fontSize: '14px' }}>
-                                                    <strong>{managingConnectionsVM.name}</strong> [<code>{conn.local_nic}</code>] 
-                                                    <span style={{ margin: '0 8px', color: '#6b7280' }}>&lt;----&gt;</span> 
-                                                    [<code>{conn.target_nic}</code>] <strong>{cVm ? cVm.name : conn.target_vm_id}</strong>
-                                                </div>
-                                                <button className="btn btn-sm btn-danger" onClick={() => handleDisconnect(conn.target_vm_id)}>Disconnect</button>
-                                            </li>
-                                        );
-                                    })}
-                                </ul>
-                            )}
-                        </div>
+            <Header 
+                currentUser={currentUser}
+                showNetworkMap={showNetworkMap}
+                onToggleNetworkMap={() => setShowNetworkMap(prev => !prev)}
+                onLogout={handleLogout}
+            />
 
-                        {availableVMsToConnect.length > 0 && (
-                            <form onSubmit={handleConnect} style={{ display: 'flex', gap: '8px', alignItems: 'flex-end', marginTop: '1rem' }}>
-                                <div className="form-group" style={{ flex: 1, marginBottom: 0 }}>
-                                    <label>Connect to:</label>
-                                    <select 
-                                        value={connectionTargetId} 
-                                        onChange={(e) => setConnectionTargetId(e.target.value)}
-                                        required
-                                    >
-                                        <option value="">-- Select VM --</option>
-                                        {availableVMsToConnect.map(v => (
-                                            <option key={v.id} value={v.id}>{v.name}</option>
-                                        ))}
-                                    </select>
-                                </div>
-                                <button type="submit" className="btn btn-primary" style={{ padding: '8px 16px' }}>Link</button>
-                            </form>
-                        )}
-
-                        <div className="modal-actions" style={{ marginTop: '2rem' }}>
-                            <button 
-                                className="btn btn-secondary" 
-                                onClick={() => setManagingConnectionsVM(null)}
-                            >
-                                Close
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            <header className="header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <h2>Virtual Machine Manager</h2>
-                <button className="btn btn-secondary btn-sm" onClick={handleLogout}>Logout</button>
-            </header>
-            
             {message && (
                 <div className={`message ${message.startsWith('Error') ? 'error' : 'success'}`}>
                     {message}
                 </div>
             )}
 
-            <div className="card">
-                <h3>Create New VM</h3>
-                <form className="create-form" onSubmit={handleCreate}>
-                    <div className="form-group">
-                        <label>Name:</label>
-                        <input 
-                            type="text" 
-                            value={newName} 
-                            onChange={(e) => setNewName(e.target.value)} 
-                            placeholder="my-new-vm"
-                        />
-                    </div>
-                    <div className="form-group">
-                        <label>Template:</label>
-                        <select 
-                            value={selectedTemplate} 
-                            onChange={(e) => setSelectedTemplate(e.target.value)}
-                        >
-                            {templates.map(t => (
-                                <option key={t.id} value={t.id}>{t.name} ({t.ram_mb} MB)</option>
-                            ))}
-                        </select>
-                    </div>
-                    <button type="submit" className="btn btn-primary">Create VM</button>
-                </form>
-            </div>
+            <CreateVMCard 
+                templates={templates}
+                onCreateVM={handleCreateVM}
+            />
 
-            <div className="card">
-                <h3>Existing VMs</h3>
-                <table className="vm-table">
-                    <thead>
-                        <tr>
-                            <th>Name</th>
-                            <th>Status</th>
-                            <th>RAM (MB)</th>
-                            <th>Connections</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                    {vms.map((vm) => (
-                        <tr key={vm.id}>
-                            <td className="fw-500">{vm.name}</td>
-                            <td>
-                                <span className={`status-badge ${vm.status === 'Running' ? 'status-running' : 'status-stopped'}`}>
-                                    {vm.status}
-                                </span>
-                            </td>
-                            <td>{vm.ram_mb}</td>
-                            <td>
-                                {(vm.connections || []).length === 0 ? (
-                                    <span className="text-muted">None</span>
-                                ) : (
-                                    <ul style={{ listStyleType: 'none', padding: 0, margin: 0, fontSize: '12px', fontFamily: 'monospace' }}>
-                                        {(vm.connections || []).map(conn => {
-                                            const tVm = vms.find(v => v.id === conn.target_vm_id);
-                                            return (
-                                                <li key={conn.target_vm_id} style={{ whiteSpace: 'nowrap' }}>
-                                                    [{conn.local_nic}] &rarr; [{conn.target_nic}] {tVm ? tVm.name : conn.target_vm_id}
-                                                </li>
-                                            );
-                                        })}
-                                    </ul>
-                                )}
-                            </td>
-                            <td>
-                                <div className="action-buttons">
-                                    {vm.status === 'Running' ? (
-                                        <>
-                                            <button 
-                                                className="btn btn-sm btn-warning"
-                                                onClick={() => handleAction(StopVM, vm.id, vm.name, true, `Are you sure you want to stop ${vm.name}?`)}
-                                            >
-                                                Stop
-                                            </button>
-                                            <button 
-                                                className="btn btn-sm btn-primary"
-                                                onClick={() => OpenConsole(vm.id)}
-                                            >
-                                                Console
-                                            </button>
-                                        </>
-                                    ) : (
-                                        <button 
-                                            className="btn btn-sm btn-success"
-                                            onClick={() => handleAction(StartVM, vm.id, vm.name, false, "")}
-                                        >
-                                            Start
-                                        </button>
-                                    )}
-                                    <button 
-                                        className="btn btn-sm btn-secondary ml-2"
-                                        onClick={() => setManagingConnectionsVM(vm)}
-                                    >
-                                        Connections
-                                    </button>
-                                    <button 
-                                        className="btn btn-sm btn-danger ml-2"
-                                        onClick={() => handleAction(DeleteVM, vm.id, vm.name, true, `Are you sure you want to DELETE ${vm.name}? This action cannot be undone.`)}
-                                    >
-                                        Delete
-                                    </button>
-                                </div>
-                            </td>
-                        </tr>
-                    ))}
-                    {vms.length === 0 && (
-                        <tr>
-                            <td colSpan={5} className="text-center text-muted">No VMs found.</td>
-                        </tr>
-                    )}
-                    </tbody>
-                </table>
-            </div>
+            <VMTable 
+                vms={vms}
+                isRefreshing={isRefreshing}
+                onRefresh={() => fetchVMs()}
+                onStartVM={handleStartVM}
+                onStopVM={handleStopVM}
+                onOpenConsole={handleOpenConsole}
+                onManageNetworking={(vm) => setManagingConnectionsVM(vm)}
+                onDeleteVM={handleDeleteVM}
+            />
         </div>
     );
 }

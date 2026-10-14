@@ -1,9 +1,23 @@
 export namespace main {
 	
+	export class AuthResult {
+	    token: string;
+	    email: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new AuthResult(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.token = source["token"];
+	        this.email = source["email"];
+	    }
+	}
 	export class Template {
-	    id: string;
+	    id: number;
+	    uuid?: string;
 	    name: string;
-	    ram_mb: number;
 	
 	    static createFrom(source: any = {}) {
 	        return new Template(source);
@@ -12,8 +26,8 @@ export namespace main {
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.id = source["id"];
+	        this.uuid = source["uuid"];
 	        this.name = source["name"];
-	        this.ram_mb = source["ram_mb"];
 	    }
 	}
 	export class VMConnection {
@@ -33,12 +47,14 @@ export namespace main {
 	    }
 	}
 	export class VM {
-	    id: string;
+	    id: number;
+	    uuid?: string;
 	    name: string;
-	    status: string;
-	    ram_mb: number;
-	    available_nics: string[];
-	    connections: VMConnection[];
+	    status?: string;
+	    ram_mb?: number;
+	    networks?: string[];
+	    available_nics?: string[];
+	    connections?: VMConnection[];
 	
 	    static createFrom(source: any = {}) {
 	        return new VM(source);
@@ -47,9 +63,11 @@ export namespace main {
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.id = source["id"];
+	        this.uuid = source["uuid"];
 	        this.name = source["name"];
 	        this.status = source["status"];
 	        this.ram_mb = source["ram_mb"];
+	        this.networks = source["networks"];
 	        this.available_nics = source["available_nics"];
 	        this.connections = this.convertValues(source["connections"], VMConnection);
 	    }

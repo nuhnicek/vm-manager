@@ -297,3 +297,59 @@ body {
   padding: 12px;
   font-size: 16px;
 }
+
+.login-btn:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.login-hint {
+  margin-top: 16px;
+  padding: 10px 12px;
+  background-color: #f9fafb;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  font-size: 12px;
+  color: var(--text-muted);
+  line-height: 1.5;
+  text-align: center;
+}
+
+.login-hint code {
+  background-color: #e5e7eb;
+  padding: 2px 4px;
+  border-radius: 4px;
+  font-family: monospace;
+  color: var(--text-main);
+}
+
+.user-badge {
+  display: inline-flex;
+  align-items: center;
+  background-color: #e5e7eb;
+  color: var(--text-main);
+  padding: 4px 10px;
+  border-radius: 9999px;
+  font-size: 13px;
+  font-weight: 500;
+  margin-right: 12px;
+}
+
+.user-badge-icon {
+  margin-right: 6px;
+  font-size: 14px;
+}
+
+
+/* Network Map Overrides */
+.mermaid-container {
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    display: flex;
+}
+.mermaid-container svg {
+    margin: auto; 
+    display: block; 
+    padding: 20px;
+}
