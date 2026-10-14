@@ -1,3 +1,32 @@
-build/bin
-node_modules
-frontend/dist
+# Application Binaries
+lab411-vm-manager
+lab411-vm-manager.exe
+build/bin/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Frontend Build & Dependencies
+node_modules/
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+frontend/package.json.md5
+
+# IDE and Editor Files
+.idea/
+.vscode/
+*.swp
+*~
+
+# OS Metadata
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
