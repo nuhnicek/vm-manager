@@ -5,7 +5,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"math/rand"
 	"net/http"
 	"os"
 	"os/exec"
@@ -16,20 +15,17 @@ import (
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
-// AuthResult represents the response for authentication
 type AuthResult struct {
 	Token string `json:"token"`
 	Email string `json:"email"`
 }
 
-// VMConnection represents a point-to-point link between two VMs
 type VMConnection struct {
 	TargetVMID string `json:"target_vm_id"`
 	LocalNIC   string `json:"local_nic"`
 	TargetNIC  string `json:"target_nic"`
 }
 
-// VM represents a virtual machine from Proxmox backend
 type VM struct {
 	ID            uint64         `json:"id"`
 	UUID          string         `json:"uuid,omitempty"`
@@ -41,14 +37,12 @@ type VM struct {
 	Connections   []VMConnection `json:"connections,omitempty"`
 }
 
-// Template represents a VM template from Proxmox backend
 type Template struct {
 	ID   uint64 `json:"id"`
 	UUID string `json:"uuid,omitempty"`
 	Name string `json:"name"`
 }
 
-// helper to match VM by id, uuid, or name
 func vmMatches(vm VM, id string) bool {
 	return fmt.Sprintf("%d", vm.ID) == id || vm.UUID == id || vm.Name == id
 }
@@ -65,7 +59,6 @@ func (a *App) getNumericVMID(id string) (int, string, error) {
 	return 0, "", fmt.Errorf("VM %s not found", id)
 }
 
-// App application struct
 type App struct {
 	ctx              context.Context
 	vms              []VM
@@ -79,11 +72,7 @@ type App struct {
 	userEmail        string
 }
 
-// NewApp creates a new App application struct
 func NewApp() *App {
-	rand.Seed(time.Now().UnixNano())
-
-	// Check if we are running in console mode
 	consoleID := ""
 	consoleVM := ""
 	consoleToken := ""
@@ -118,12 +107,10 @@ func NewApp() *App {
 	}
 }
 
-// GetLaunchedConsoleVM returns the VM name if the app was launched in console mode
 func (a *App) GetLaunchedConsoleVM() string {
 	return a.consoleModeVM
 }
 
-// GetConsoleParams returns the console parameters if launched in console mode
 func (a *App) GetConsoleParams() map[string]string {
 	return map[string]string{
 		"id":    a.consoleModeID,
@@ -132,17 +119,14 @@ func (a *App) GetConsoleParams() map[string]string {
 	}
 }
 
-// GetBackendURL returns the backend URL configured for the app
 func (a *App) GetBackendURL() string {
 	return a.backendURL
 }
 
-// startup is called when the app starts
 func (a *App) startup(ctx context.Context) {
 	a.ctx = ctx
 }
 
-// GetVMs fetches the user's real VMs from backend /vms
 func (a *App) GetVMs(token string) ([]VM, error) {
 	if token == "" {
 		token = a.authToken
@@ -183,7 +167,6 @@ func (a *App) GetVMs(token string) ([]VM, error) {
 	return fetchedVMs, nil
 }
 
-// GetTemplates fetches real VM templates from backend /vms/templates
 func (a *App) GetTemplates(token string) ([]Template, error) {
 	if token == "" {
 		token = a.authToken
@@ -223,7 +206,6 @@ func (a *App) GetTemplates(token string) ([]Template, error) {
 	return fetchedTemplates, nil
 }
 
-// StartVM starts a VM via backend POST /vms/start
 func (a *App) StartVM(id string) (string, error) {
 	vmid, vmName, err := a.getNumericVMID(id)
 	if err != nil {
@@ -250,7 +232,9 @@ func (a *App) StartVM(id string) (string, error) {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		var errData struct{ Error string `json:"error"` }
+		var errData struct {
+			Error string `json:"error"`
+		}
 		_ = json.NewDecoder(resp.Body).Decode(&errData)
 		if errData.Error != "" {
 			return "", fmt.Errorf("start failed: %s", errData.Error)
@@ -261,7 +245,6 @@ func (a *App) StartVM(id string) (string, error) {
 	return fmt.Sprintf("Successfully started %s", vmName), nil
 }
 
-// StopVM stops a VM via backend POST /vms/stop
 func (a *App) StopVM(id string) (string, error) {
 	vmid, vmName, err := a.getNumericVMID(id)
 	if err != nil {
@@ -288,7 +271,9 @@ func (a *App) StopVM(id string) (string, error) {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		var errData struct{ Error string `json:"error"` }
+		var errData struct {
+			Error string `json:"error"`
+		}
 		_ = json.NewDecoder(resp.Body).Decode(&errData)
 		if errData.Error != "" {
 			return "", fmt.Errorf("stop failed: %s", errData.Error)
@@ -299,7 +284,6 @@ func (a *App) StopVM(id string) (string, error) {
 	return fmt.Sprintf("Successfully stopped %s", vmName), nil
 }
 
-// DeleteVM deletes a VM via backend POST /vms/delete
 func (a *App) DeleteVM(id string) (string, error) {
 	vmid, vmName, err := a.getNumericVMID(id)
 	if err != nil {
@@ -326,7 +310,9 @@ func (a *App) DeleteVM(id string) (string, error) {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		var errData struct{ Error string `json:"error"` }
+		var errData struct {
+			Error string `json:"error"`
+		}
 		_ = json.NewDecoder(resp.Body).Decode(&errData)
 		if errData.Error != "" {
 			return "", fmt.Errorf("delete failed: %s", errData.Error)
@@ -337,7 +323,6 @@ func (a *App) DeleteVM(id string) (string, error) {
 	return fmt.Sprintf("Successfully deleted %s", vmName), nil
 }
 
-// OpenConsole Window spawns a new instance of the application in console mode
 func (a *App) OpenConsole(id string) (string, error) {
 	vmid, vmName, err := a.getNumericVMID(id)
 	if err != nil {
@@ -365,7 +350,6 @@ func (a *App) OpenConsole(id string) (string, error) {
 	return fmt.Sprintf("Console opened for %s", vmName), nil
 }
 
-// CreateVMFromTemplate creates a new VM based on a template via backend POST /vms/create
 func (a *App) CreateVMFromTemplate(name string, templateID string) (*VM, error) {
 	if name == "" {
 		return nil, fmt.Errorf("VM name cannot be empty")
@@ -433,7 +417,6 @@ func (a *App) CreateVMFromTemplate(name string, templateID string) (*VM, error) 
 	return newVM, nil
 }
 
-// StartPTY starts a real shell session and pipes its output to wails events
 func (a *App) StartPTY() error {
 	if a.consoleModeVM == "" {
 		return fmt.Errorf("not in console mode")
@@ -451,7 +434,6 @@ func (a *App) StartPTY() error {
 	}
 	a.ptyFile = ptmx
 
-	// Read from pty and emit
 	go func() {
 		buf := make([]byte, 1024)
 		for {
@@ -465,14 +447,12 @@ func (a *App) StartPTY() error {
 	return nil
 }
 
-// WritePTY writes data to the active PTY
 func (a *App) WritePTY(data string) {
 	if a.ptyFile != nil {
 		a.ptyFile.Write([]byte(data))
 	}
 }
 
-// ResizePTY resizes the active PTY
 func (a *App) ResizePTY(rows, cols uint16) {
 	if a.ptyFile != nil {
 		pty.Setsize(a.ptyFile, &pty.Winsize{
@@ -482,7 +462,6 @@ func (a *App) ResizePTY(rows, cols uint16) {
 	}
 }
 
-// AddNIC adds a new NIC to a VM via backend POST /vms/network/add-nic
 func (a *App) AddNIC(id string) (string, error) {
 	vmid, vmName, err := a.getNumericVMID(id)
 	if err != nil {
@@ -509,7 +488,9 @@ func (a *App) AddNIC(id string) (string, error) {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		var errData struct{ Error string `json:"error"` }
+		var errData struct {
+			Error string `json:"error"`
+		}
 		_ = json.NewDecoder(resp.Body).Decode(&errData)
 		if errData.Error != "" {
 			return "", fmt.Errorf("add NIC failed: %s", errData.Error)
@@ -517,13 +498,14 @@ func (a *App) AddNIC(id string) (string, error) {
 		return "", fmt.Errorf("failed to add NIC (status %d)", resp.StatusCode)
 	}
 
-	var res struct{ Nic string `json:"nic"` }
+	var res struct {
+		Nic string `json:"nic"`
+	}
 	_ = json.NewDecoder(resp.Body).Decode(&res)
 
 	return fmt.Sprintf("Added %s to %s", res.Nic, vmName), nil
 }
 
-// RemoveNIC removes a network interface from a VM via backend POST /vms/network/remove
 func (a *App) RemoveNIC(id string, nic string) (string, error) {
 	vmid, vmName, err := a.getNumericVMID(id)
 	if err != nil {
@@ -550,7 +532,9 @@ func (a *App) RemoveNIC(id string, nic string) (string, error) {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		var errData struct{ Error string `json:"error"` }
+		var errData struct {
+			Error string `json:"error"`
+		}
 		_ = json.NewDecoder(resp.Body).Decode(&errData)
 		if errData.Error != "" {
 			return "", fmt.Errorf("remove NIC failed: %s", errData.Error)
@@ -561,7 +545,6 @@ func (a *App) RemoveNIC(id string, nic string) (string, error) {
 	return fmt.Sprintf("Removed %s from %s", nic, vmName), nil
 }
 
-// ConnectVMs links two VMs together via backend POST /vms/network/create
 func (a *App) ConnectVMs(id1, nic1, id2, nic2 string) (string, error) {
 	vmid1, vmName1, err := a.getNumericVMID(id1)
 	if err != nil {
@@ -600,7 +583,9 @@ func (a *App) ConnectVMs(id1, nic1, id2, nic2 string) (string, error) {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		var errData struct{ Error string `json:"error"` }
+		var errData struct {
+			Error string `json:"error"`
+		}
 		_ = json.NewDecoder(resp.Body).Decode(&errData)
 		if errData.Error != "" {
 			return "", fmt.Errorf("connection failed: %s", errData.Error)
@@ -611,7 +596,6 @@ func (a *App) ConnectVMs(id1, nic1, id2, nic2 string) (string, error) {
 	return fmt.Sprintf("Connected %s (%s) <--> %s (%s)", vmName1, nic1, vmName2, nic2), nil
 }
 
-// DisconnectVMs unlinks two VMs via backend POST /vms/network/disconnect
 func (a *App) DisconnectVMs(id1, id2 string) (string, error) {
 	vmid1, vmName1, err := a.getNumericVMID(id1)
 	if err != nil {
@@ -645,7 +629,9 @@ func (a *App) DisconnectVMs(id1, id2 string) (string, error) {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		var errData struct{ Error string `json:"error"` }
+		var errData struct {
+			Error string `json:"error"`
+		}
 		_ = json.NewDecoder(resp.Body).Decode(&errData)
 		if errData.Error != "" {
 			return "", fmt.Errorf("disconnect failed: %s", errData.Error)
@@ -656,7 +642,6 @@ func (a *App) DisconnectVMs(id1, id2 string) (string, error) {
 	return fmt.Sprintf("Disconnected %s and %s", vmName1, vmName2), nil
 }
 
-// Login sends authentication request to the backend server
 func (a *App) Login(email, password string) (*AuthResult, error) {
 	if email == "" || password == "" {
 		return nil, fmt.Errorf("email and password cannot be empty")
@@ -708,7 +693,6 @@ func (a *App) Login(email, password string) (*AuthResult, error) {
 	return nil, fmt.Errorf("login failed with status %d", resp.StatusCode)
 }
 
-// VerifySession checks if the session token is still valid via backend /ping
 func (a *App) VerifySession(token string) (bool, error) {
 	if token == "" {
 		return false, nil
@@ -734,7 +718,6 @@ func (a *App) VerifySession(token string) (bool, error) {
 	return false, nil
 }
 
-// Logout clears the current session
 func (a *App) Logout() {
 	a.authToken = ""
 	a.userEmail = ""

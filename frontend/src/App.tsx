@@ -21,19 +21,16 @@ import './App.css';
 function App() {
     const [launchedConsoleVM, setLaunchedConsoleVM] = useState<string>('');
 
-    // Authentication State
     const [isAuthenticated, setIsAuthenticated] = useState(false);
     const [isVerifyingSession, setIsVerifyingSession] = useState(true);
     const [currentUser, setCurrentUser] = useState<string>('');
     const [authToken, setAuthToken] = useState<string>('');
 
-    // VM and Template Data State
     const [vms, setVms] = useState<main.VM[]>([]);
     const [templates, setTemplates] = useState<main.Template[]>([]);
     const [isRefreshing, setIsRefreshing] = useState(false);
     const [message, setMessage] = useState('');
 
-    // Modal States
     const [managingConnectionsVM, setManagingConnectionsVM] = useState<main.VM | null>(null);
     const [activeConsoleVM, setActiveConsoleVM] = useState<main.VM | null>(null);
     const [launchedConsoleParams, setLaunchedConsoleParams] = useState<Record<string, string> | null>(null);
@@ -48,7 +45,6 @@ function App() {
         onConfirm: () => {}
     });
 
-    // Check if app was launched in console window mode
     useEffect(() => {
         const checkLaunchedConsole = async () => {
             try {
@@ -74,7 +70,6 @@ function App() {
         checkLaunchedConsole();
     }, []);
 
-    // Restore saved session on startup
     useEffect(() => {
         const restoreSession = async () => {
             const savedToken = localStorage.getItem('vm_manager_token');
@@ -115,7 +110,6 @@ function App() {
         restoreSession();
     }, []);
 
-    // Keep managingConnectionsVM reference in sync with latest vms
     useEffect(() => {
         if (managingConnectionsVM) {
             const updatedVM = vms.find(v => String(v.id) === String(managingConnectionsVM.id));
@@ -123,7 +117,6 @@ function App() {
         }
     }, [vms]);
 
-    // Data Fetching
     const fetchVMs = async (tokenOverride?: string) => {
         const token = tokenOverride || authToken || localStorage.getItem('vm_manager_token') || '';
         if (!token) return;
@@ -186,7 +179,6 @@ function App() {
         }
     };
 
-    // Auth Handlers
     const handleLoginSuccess = async (token: string, userEmail: string) => {
         localStorage.setItem('vm_manager_token', token);
         localStorage.setItem('vm_manager_email', userEmail);
@@ -215,7 +207,6 @@ function App() {
         setTemplates([]);
     };
 
-    // Action Helpers
     const executeAction = async (actionFn: (id: string) => Promise<string>, id: string, endpoint?: string) => {
         try {
             if (typeof window !== 'undefined' && (window as any).go?.main?.App) {
@@ -264,7 +255,6 @@ function App() {
         });
     };
 
-    // VM Operations
     const handleStartVM = (id: string, _name: string) => {
         executeAction(StartVM, id, '/vms/start');
     };
@@ -348,7 +338,6 @@ function App() {
         }
     };
 
-    // Networking Operations
     const handleAddNIC = async () => {
         if (!managingConnectionsVM) return;
         try {
@@ -467,7 +456,6 @@ function App() {
         }
     };
 
-    // Console Mode
     if (launchedConsoleVM) {
         return (
             <div style={{ height: '100vh', width: '100vw', backgroundColor: '#0a0f1d', margin: 0, padding: 0 }}>
@@ -481,7 +469,6 @@ function App() {
         );
     }
 
-    // Session Verifying State
     if (isVerifyingSession) {
         return (
             <div className="login-container">
@@ -492,12 +479,10 @@ function App() {
         );
     }
 
-    // Login Form
     if (!isAuthenticated) {
         return <Login onLoginSuccess={handleLoginSuccess} />;
     }
 
-    // Main App View
     return (
         <div className="container">
             <ConfirmModal 

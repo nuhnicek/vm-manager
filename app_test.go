@@ -1,21 +1,39 @@
 package main
 
 import (
+	"net/http"
+	"strings"
 	"testing"
+	"time"
 )
+
+func isBackendAvailable(url string) bool {
+	client := &http.Client{Timeout: 500 * time.Millisecond}
+	resp, err := client.Get(url + "/ping")
+	if err != nil {
+		return false
+	}
+	defer resp.Body.Close()
+	return true
+}
 
 func TestAppLoginAndVerify(t *testing.T) {
 	app := NewApp()
 
-	// 1. Test Login with invalid credentials
+	if !isBackendAvailable(app.backendURL) {
+		t.Skip("skipping live integration test: backend server is offline")
+	}
+
 	_, err := app.Login("invalid@example.com", "wrong")
 	if err == nil {
 		t.Fatal("expected error for invalid credentials, got nil")
 	}
 
-	// 2. Test Login with valid credentials
 	authRes, err := app.Login("p.beunier.st@spseiostrava.cz", "123")
 	if err != nil {
+		if strings.Contains(err.Error(), "connection refused") {
+			t.Skip("skipping live test: backend connection refused")
+		}
 		t.Fatalf("login failed: %v", err)
 	}
 	if authRes.Token == "" {
@@ -25,7 +43,6 @@ func TestAppLoginAndVerify(t *testing.T) {
 		t.Fatalf("expected email p.beunier.st@spseiostrava.cz, got %s", authRes.Email)
 	}
 
-	// 3. Test VerifySession with valid token
 	valid, err := app.VerifySession(authRes.Token)
 	if err != nil {
 		t.Fatalf("VerifySession error: %v", err)
@@ -34,7 +51,6 @@ func TestAppLoginAndVerify(t *testing.T) {
 		t.Fatal("expected session to be valid")
 	}
 
-	// 4. Test VerifySession with invalid token
 	invalidValid, err := app.VerifySession("fake-token-12345")
 	if err != nil {
 		t.Fatalf("VerifySession error: %v", err)
@@ -43,7 +59,6 @@ func TestAppLoginAndVerify(t *testing.T) {
 		t.Fatal("expected fake token to be invalid")
 	}
 
-	// 5. Test Logout
 	app.Logout()
 	if app.authToken != "" || app.userEmail != "" {
 		t.Fatal("expected cleared session after logout")
@@ -53,25 +68,28 @@ func TestAppLoginAndVerify(t *testing.T) {
 func TestAppGetVMsAndTemplatesLive(t *testing.T) {
 	app := NewApp()
 
-	// 1. Unauthenticated GetVMs should fail
 	_, err := app.GetVMs("")
 	if err == nil {
 		t.Fatal("expected error when fetching VMs without auth, got nil")
 	}
 
-	// 2. Unauthenticated GetTemplates should fail
 	_, err = app.GetTemplates("")
 	if err == nil {
 		t.Fatal("expected error when fetching templates without auth, got nil")
 	}
 
-	// 3. Login with test account
+	if !isBackendAvailable(app.backendURL) {
+		t.Skip("skipping live integration test: backend server is offline")
+	}
+
 	authRes, err := app.Login("p.beunier.st@spseiostrava.cz", "123")
 	if err != nil {
+		if strings.Contains(err.Error(), "connection refused") {
+			t.Skip("skipping live test: backend connection refused")
+		}
 		t.Fatalf("login failed: %v", err)
 	}
 
-	// 4. Fetch live VMs from Proxmox
 	vms, err := app.GetVMs(authRes.Token)
 	if err != nil {
 		t.Fatalf("failed to fetch live VMs: %v", err)
@@ -79,13 +97,11 @@ func TestAppGetVMsAndTemplatesLive(t *testing.T) {
 	t.Logf("Fetched %d live VMs from Proxmox", len(vms))
 	for _, vm := range vms {
 		t.Logf("VM: ID=%d, Name=%s, UUID=%s", vm.ID, vm.Name, vm.UUID)
-		// Ensure no mock names exist
 		if vm.Name == "ubuntu-server-prod" || vm.Name == "windows-dev-box" {
 			t.Fatalf("found mock VM %s in live results", vm.Name)
 		}
 	}
 
-	// 5. Fetch live templates from Proxmox
 	templates, err := app.GetTemplates(authRes.Token)
 	if err != nil {
 		t.Fatalf("failed to fetch live templates: %v", err)
@@ -98,7 +114,6 @@ func TestAppGetVMsAndTemplatesLive(t *testing.T) {
 		}
 	}
 
-	// 6. Test CreateVMFromTemplate validation
 	_, err = app.CreateVMFromTemplate("", "9000")
 	if err == nil {
 		t.Fatal("expected error for empty VM name, got nil")
@@ -109,4 +124,3 @@ func TestAppGetVMsAndTemplatesLive(t *testing.T) {
 		t.Fatal("expected error for non-existent template ID, got nil")
 	}
 }
-

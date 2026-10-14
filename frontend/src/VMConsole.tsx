@@ -22,9 +22,7 @@ async function resolveWebSocketUrl(vmId: string | number, tokenOverride: string 
             if (configured) {
                 backendUrl = configured;
             }
-        } catch {
-            // fallback to default
-        }
+        } catch {}
     }
 
     const wsProto = backendUrl.startsWith('https') ? 'wss:' : 'ws:';
@@ -41,7 +39,6 @@ export function VMConsole({ vmId, vmName, token, onClose, onPopOut }: VMConsoleP
     const vncContainerRef = useRef<HTMLDivElement>(null);
     const terminalRef = useRef<HTMLDivElement>(null);
 
-    // VNC Display Mode Effect
     useEffect(() => {
         if (consoleMode !== 'vnc' || !vncContainerRef.current) return;
 
@@ -62,7 +59,6 @@ export function VMConsole({ vmId, vmName, token, onClose, onPopOut }: VMConsoleP
                 const vncUrl = await resolveWebSocketUrl(vmId, token, 'vnc');
                 if (isDisposed) return;
 
-                // Clear previous canvas if any
                 if (!vncContainerRef.current) return;
                 vncContainerRef.current.innerHTML = '';
 
@@ -121,7 +117,6 @@ export function VMConsole({ vmId, vmName, token, onClose, onPopOut }: VMConsoleP
         };
     }, [consoleMode, vmId, vmName, token, connectAttempt]);
 
-    // Serial Terminal Mode Effect
     useEffect(() => {
         if (consoleMode !== 'serial' || !terminalRef.current) return;
 
@@ -241,7 +236,6 @@ export function VMConsole({ vmId, vmName, token, onClose, onPopOut }: VMConsoleP
             display: 'flex',
             flexDirection: 'column'
         }}>
-            {/* Top Toolbar */}
             <div style={{
                 backgroundColor: '#1e293b',
                 color: '#f8fafc',
@@ -252,7 +246,6 @@ export function VMConsole({ vmId, vmName, token, onClose, onPopOut }: VMConsoleP
                 borderBottom: '1px solid #334155',
                 userSelect: 'none'
             }}>
-                {/* Title & Mode Switcher */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                     <div style={{ fontWeight: 600, fontSize: '14px', letterSpacing: '0.02em' }}>
                         🖥️ {vmName} <span style={{ opacity: 0.6, fontSize: '12px' }}>({vmId ? `VMID: ${vmId}` : 'Console'})</span>
@@ -303,7 +296,6 @@ export function VMConsole({ vmId, vmName, token, onClose, onPopOut }: VMConsoleP
                         </button>
                     </div>
 
-                    {/* Status Pill */}
                     <div style={{
                         display: 'flex',
                         alignItems: 'center',
@@ -331,7 +323,6 @@ export function VMConsole({ vmId, vmName, token, onClose, onPopOut }: VMConsoleP
                     </span>
                 </div>
 
-                {/* Right Action Controls */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <button
                         type="button"
@@ -390,9 +381,7 @@ export function VMConsole({ vmId, vmName, token, onClose, onPopOut }: VMConsoleP
                 </div>
             </div>
 
-            {/* Display / Console Body */}
             <div style={{ flex: 1, position: 'relative', overflow: 'hidden', backgroundColor: '#000000' }}>
-                {/* VNC Mode Container */}
                 <div
                     ref={vncContainerRef}
                     tabIndex={0}
@@ -407,7 +396,6 @@ export function VMConsole({ vmId, vmName, token, onClose, onPopOut }: VMConsoleP
                     }}
                 />
 
-                {/* Serial Terminal Mode Container */}
                 <div
                     ref={terminalRef}
                     style={{

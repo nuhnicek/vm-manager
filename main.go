@@ -12,7 +12,6 @@ import (
 var assets embed.FS
 
 func main() {
-	// Create an instance of the app structure
 	app := NewApp()
 
 	title := "lab411-vm-manager"
@@ -25,7 +24,6 @@ func main() {
 		height = 600
 	}
 
-	// Create application with options
 	err := wails.Run(&options.App{
 		Title:  title,
 		Width:  width,

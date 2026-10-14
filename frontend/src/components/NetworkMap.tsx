@@ -12,18 +12,15 @@ export function NetworkMap({ vms }: NetworkMapProps) {
     useEffect(() => {
         if (!ref.current) return;
 
-        // @ts-ignore: useMaxWidth is valid but missing from types in some versions
-        mermaid.initialize({ startOnLoad: false, theme: 'default', useMaxWidth: false });
+        (mermaid.initialize as any)({ startOnLoad: false, theme: 'default', useMaxWidth: false });
 
         let graphDef = 'graph LR\n';
         const drawnLinks = new Set<string>();
 
         vms.forEach(vm => {
             const nodeId = `vm_${vm.id}`;
-            // Define nodes
             graphDef += `  ${nodeId}["${vm.name} (ID: ${vm.id})"]\n`;
 
-            // Define edges
             (vm.connections || []).forEach(conn => {
                 const targetNodeId = `vm_${conn.target_vm_id}`;
                 const linkId1 = `${vm.id}-${conn.target_vm_id}`;
@@ -36,7 +33,6 @@ export function NetworkMap({ vms }: NetworkMapProps) {
             });
         });
 
-        // Add a root definition if no VMs exist
         if (vms.length === 0) {
             graphDef += `  empty["No Proxmox VMs found"]\n`;
         }

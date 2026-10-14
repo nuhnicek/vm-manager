@@ -29,7 +29,6 @@ export function NetworkingModal({
         return (targetVM.available_nics || []).filter(nic => !used.includes(nic));
     };
 
-    // Auto-select or update localNic when vm changes
     useEffect(() => {
         if (vm) {
             const unusedLocal = getUnusedNICs(vm);
@@ -39,7 +38,6 @@ export function NetworkingModal({
         }
     }, [vm]);
 
-    // Auto-select or update targetNic when connectionTargetId changes
     useEffect(() => {
         if (connectionTargetId) {
             const tgtVM = allVMs.find(v => String(v.id) === String(connectionTargetId));
