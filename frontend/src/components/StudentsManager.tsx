@@ -25,7 +25,7 @@ export function StudentsManager({ token, onMessage }: StudentsManagerProps) {
                     headers: { 'Authorization': token }
                 });
             } catch {
-                resp = await fetch('http://localhost:8080/teacher/students', {
+                resp = await fetch('http://127.0.0.1:8080/teacher/students', {
                     headers: { 'Authorization': token }
                 });
             }
@@ -62,7 +62,7 @@ export function StudentsManager({ token, onMessage }: StudentsManagerProps) {
                     body: JSON.stringify(payload)
                 });
             } catch {
-                resp = await fetch('http://localhost:8080/teacher/students', {
+                resp = await fetch('http://127.0.0.1:8080/teacher/students', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'Authorization': token },
                     body: JSON.stringify(payload)

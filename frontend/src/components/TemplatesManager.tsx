@@ -36,7 +36,7 @@ export function TemplatesManager({ templates, vms, nodes, token, onRefresh, onMe
                     body: JSON.stringify(payload)
                 });
             } catch {
-                resp = await fetch('http://localhost:8080/vms/templates/convert', {
+                resp = await fetch('http://127.0.0.1:8080/vms/templates/convert', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'Authorization': token },
                     body: JSON.stringify(payload)
@@ -77,7 +77,7 @@ export function TemplatesManager({ templates, vms, nodes, token, onRefresh, onMe
                     body: JSON.stringify(payload)
                 });
             } catch {
-                resp = await fetch('http://localhost:8080/vms/templates/clone-as-template', {
+                resp = await fetch('http://127.0.0.1:8080/vms/templates/clone-as-template', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'Authorization': token },
                     body: JSON.stringify(payload)

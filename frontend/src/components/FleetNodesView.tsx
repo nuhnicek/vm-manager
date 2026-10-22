@@ -23,7 +23,7 @@ export function FleetNodesView({ nodes, token, onMessage, onRefreshNodes }: Flee
                     headers: { 'Authorization': token }
                 });
             } catch {
-                resp = await fetch('http://localhost:8080/teacher/vms', {
+                resp = await fetch('http://127.0.0.1:8080/teacher/vms', {
                     headers: { 'Authorization': token }
                 });
             }
@@ -57,7 +57,7 @@ export function FleetNodesView({ nodes, token, onMessage, onRefreshNodes }: Flee
                     body: JSON.stringify(payload)
                 });
             } catch {
-                resp = await fetch('http://localhost:8080/teacher/vms/bulk-action', {
+                resp = await fetch('http://127.0.0.1:8080/teacher/vms/bulk-action', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'Authorization': token },
                     body: JSON.stringify(payload)

@@ -14,6 +14,10 @@ export function CreateVMFromTemplate(arg1, arg2) {
   return window['go']['main']['App']['CreateVMFromTemplate'](arg1, arg2);
 }
 
+export function CreateVMOnNode(arg1, arg2, arg3) {
+  return window['go']['main']['App']['CreateVMOnNode'](arg1, arg2, arg3);
+}
+
 export function DeleteVM(arg1) {
   return window['go']['main']['App']['DeleteVM'](arg1);
 }
@@ -32,6 +36,14 @@ export function GetConsoleParams() {
 
 export function GetLaunchedConsoleVM() {
   return window['go']['main']['App']['GetLaunchedConsoleVM']();
+}
+
+export function GetNodes(arg1) {
+  return window['go']['main']['App']['GetNodes'](arg1);
+}
+
+export function GetRole() {
+  return window['go']['main']['App']['GetRole']();
 }
 
 export function GetTemplates(arg1) {

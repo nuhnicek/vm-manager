@@ -41,7 +41,7 @@ export function Login({ onLoginSuccess }: LoginProps) {
                         body: JSON.stringify({ email: userEmail, password })
                     });
                 } catch {
-                    resp = await fetch('http://localhost:8080/auth/login', {
+                    resp = await fetch('http://127.0.0.1:8080/auth/login', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ email: userEmail, password })

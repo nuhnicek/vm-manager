@@ -3,6 +3,7 @@ export namespace main {
 	export class AuthResult {
 	    token: string;
 	    email: string;
+	    role?: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new AuthResult(source);
@@ -12,6 +13,31 @@ export namespace main {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.token = source["token"];
 	        this.email = source["email"];
+	        this.role = source["role"];
+	    }
+	}
+	export class ProxmoxNode {
+	    name: string;
+	    host_uri: string;
+	    status: string;
+	    version?: string;
+	    total_vms: number;
+	    running_vms: number;
+	    templates: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new ProxmoxNode(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.host_uri = source["host_uri"];
+	        this.status = source["status"];
+	        this.version = source["version"];
+	        this.total_vms = source["total_vms"];
+	        this.running_vms = source["running_vms"];
+	        this.templates = source["templates"];
 	    }
 	}
 	export class Template {
@@ -52,6 +78,8 @@ export namespace main {
 	    name: string;
 	    status?: string;
 	    ram_mb?: number;
+	    node?: string;
+	    owner?: string;
 	    networks?: string[];
 	    available_nics?: string[];
 	    connections?: VMConnection[];
@@ -67,6 +95,8 @@ export namespace main {
 	        this.name = source["name"];
 	        this.status = source["status"];
 	        this.ram_mb = source["ram_mb"];
+	        this.node = source["node"];
+	        this.owner = source["owner"];
 	        this.networks = source["networks"];
 	        this.available_nics = source["available_nics"];
 	        this.connections = this.convertValues(source["connections"], VMConnection);

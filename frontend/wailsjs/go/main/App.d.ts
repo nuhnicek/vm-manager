@@ -8,6 +8,8 @@ export function ConnectVMs(arg1:string,arg2:string,arg3:string,arg4:string):Prom
 
 export function CreateVMFromTemplate(arg1:string,arg2:string):Promise<main.VM>;
 
+export function CreateVMOnNode(arg1:string,arg2:string,arg3:string):Promise<main.VM>;
+
 export function DeleteVM(arg1:string):Promise<string>;
 
 export function DisconnectVMs(arg1:string,arg2:string):Promise<string>;
@@ -17,6 +19,10 @@ export function GetBackendURL():Promise<string>;
 export function GetConsoleParams():Promise<Record<string, string>>;
 
 export function GetLaunchedConsoleVM():Promise<string>;
+
+export function GetNodes(arg1:string):Promise<Array<main.ProxmoxNode>>;
+
+export function GetRole():Promise<string>;
 
 export function GetTemplates(arg1:string):Promise<Array<main.Template>>;
 
