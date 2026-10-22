@@ -2,6 +2,7 @@ import { main } from '../../wailsjs/go/models';
 
 interface VMTableProps {
     vms: main.VM[];
+    userRole?: string;
     isRefreshing: boolean;
     onRefresh: () => void;
     onStartVM: (id: string, name: string) => void;
@@ -13,6 +14,7 @@ interface VMTableProps {
 
 export function VMTable({
     vms,
+    userRole,
     isRefreshing,
     onRefresh,
     onStartVM,
@@ -21,17 +23,19 @@ export function VMTable({
     onManageNetworking,
     onDeleteVM,
 }: VMTableProps) {
+    const isTeacher = userRole === 'teacher';
+
     return (
         <div className="card">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                <h3 style={{ margin: 0 }}>Existing VMs</h3>
+                <h3 style={{ margin: 0 }}>Existing VMs ({vms.length})</h3>
                 <button 
                     className="btn btn-secondary btn-sm" 
                     onClick={onRefresh} 
                     title="Reload VMs from Proxmox"
                     disabled={isRefreshing}
                 >
-                    {isRefreshing ? 'Refreshing...' : '↻ Refresh'}
+                    {isRefreshing ? 'Refreshing...' : 'Refresh'}
                 </button>
             </div>
             <table className="vm-table">
@@ -39,6 +43,8 @@ export function VMTable({
                     <tr>
                         <th>VMID</th>
                         <th>Name</th>
+                        <th>Node</th>
+                        {isTeacher && <th>Owner</th>}
                         <th>Status</th>
                         <th>Network Links</th>
                         <th>Actions</th>
@@ -49,6 +55,16 @@ export function VMTable({
                     <tr key={vm.id}>
                         <td style={{ fontFamily: 'monospace', fontWeight: 600 }}>{vm.id}</td>
                         <td className="fw-500">{vm.name}</td>
+                        <td>
+                            <span style={{ fontFamily: 'monospace', fontSize: '12px', padding: '2px 6px', background: '#e5e7eb', borderRadius: '4px' }}>
+                                {(vm as any).node || 'pve'}
+                            </span>
+                        </td>
+                        {isTeacher && (
+                            <td style={{ fontSize: '12px', fontFamily: 'monospace', color: 'var(--text-muted)' }}>
+                                {(vm as any).owner ? (vm as any).owner.slice(0, 8) + '...' : 'System'}
+                            </td>
+                        )}
                         <td>
                             <span className={`status-badge ${vm.status === 'Running' ? 'status-running' : 'status-stopped'}`}>
                                 {vm.status || 'Stopped'}
@@ -113,8 +129,8 @@ export function VMTable({
                 ))}
                 {vms.length === 0 && (
                     <tr>
-                        <td colSpan={5} className="text-center text-muted" style={{ padding: '24px' }}>
-                            No VMs found on Proxmox for this account.
+                        <td colSpan={isTeacher ? 7 : 6} className="text-center text-muted" style={{ padding: '24px' }}>
+                            No VMs found on Proxmox cluster.
                         </td>
                     </tr>
                 )}

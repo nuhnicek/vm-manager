@@ -163,7 +163,7 @@ export function VMConsole({ vmId, vmName, token, onClose, onPopOut }: VMConsoleP
                     if (isDisposed) return;
                     setStatus('connected');
                     setStatusMessage(`Connected to serial terminal`);
-                    term.writeln(`\x1b[32m✔ Connected to serial terminal for ${vmName}\x1b[0m\r\n`);
+                    term.writeln(`\x1b[32mConnected to serial terminal for ${vmName}\x1b[0m\r\n`);
                 };
 
                 ws.onmessage = (event) => {
@@ -248,7 +248,7 @@ export function VMConsole({ vmId, vmName, token, onClose, onPopOut }: VMConsoleP
             }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                     <div style={{ fontWeight: 600, fontSize: '14px', letterSpacing: '0.02em' }}>
-                        🖥️ {vmName} <span style={{ opacity: 0.6, fontSize: '12px' }}>({vmId ? `VMID: ${vmId}` : 'Console'})</span>
+                        {vmName} <span style={{ opacity: 0.6, fontSize: '12px' }}>({vmId ? `VMID: ${vmId}` : 'Console'})</span>
                     </div>
 
                     <div style={{
@@ -376,7 +376,7 @@ export function VMConsole({ vmId, vmName, token, onClose, onPopOut }: VMConsoleP
                         }}
                         title="Close console"
                     >
-                        ✕
+                        X
                     </button>
                 </div>
             </div>

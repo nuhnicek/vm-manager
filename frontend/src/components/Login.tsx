@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Login as WailsLogin } from '../../wailsjs/go/main/App';
 
 interface LoginProps {
-    onLoginSuccess: (token: string, email: string) => void;
+    onLoginSuccess: (token: string, email: string, role?: string) => void;
 }
 
 export function Login({ onLoginSuccess }: LoginProps) {
@@ -24,11 +24,13 @@ export function Login({ onLoginSuccess }: LoginProps) {
         try {
             let token = '';
             let userEmail = email.trim();
+            let role = '';
 
             if (typeof window !== 'undefined' && (window as any).go?.main?.App?.Login) {
                 const res = await WailsLogin(userEmail, password);
                 token = res.token;
                 userEmail = res.email || userEmail;
+                role = (res as any).role || '';
             } else {
                 let resp: Response;
                 try {
@@ -48,6 +50,7 @@ export function Login({ onLoginSuccess }: LoginProps) {
                 if (resp.status === 200) {
                     const data = await resp.json();
                     token = data.token;
+                    role = data.role || '';
                 } else if (resp.status === 500) {
                     throw new Error('Invalid email or password.');
                 } else if (resp.status === 400) {
@@ -61,7 +64,7 @@ export function Login({ onLoginSuccess }: LoginProps) {
                 throw new Error('No session token received.');
             }
 
-            onLoginSuccess(token, userEmail);
+            onLoginSuccess(token, userEmail, role);
             setPassword('');
         } catch (err: any) {
             console.error('Login failed:', err);
@@ -85,10 +88,10 @@ export function Login({ onLoginSuccess }: LoginProps) {
                     <div className="form-group">
                         <label>Email</label>
                         <input 
-                            type="email" 
+                            type="text" 
                             value={email} 
                             onChange={(e) => setEmail(e.target.value)} 
-                            placeholder="name@example.com"
+                            placeholder="admin or name@example.com"
                             required
                             disabled={isLoading}
                             autoFocus
@@ -100,7 +103,7 @@ export function Login({ onLoginSuccess }: LoginProps) {
                             type="password" 
                             value={password} 
                             onChange={(e) => setPassword(e.target.value)} 
-                            placeholder="••••••••"
+                            placeholder="password"
                             required
                             disabled={isLoading}
                         />

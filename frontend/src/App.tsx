@@ -15,6 +15,7 @@ import { VMTable } from './components/VMTable';
 import { NetworkingModal } from './components/NetworkingModal';
 import { NetworkTopologyModal } from './components/NetworkTopologyModal';
 import { ConfirmModal } from './components/ConfirmModal';
+import { NodesCard, ProxmoxNode } from './components/NodesCard';
 
 import './App.css';
 
@@ -24,7 +25,11 @@ function App() {
     const [isAuthenticated, setIsAuthenticated] = useState(false);
     const [isVerifyingSession, setIsVerifyingSession] = useState(true);
     const [currentUser, setCurrentUser] = useState<string>('');
+    const [userRole, setUserRole] = useState<string>('');
     const [authToken, setAuthToken] = useState<string>('');
+
+    const [nodes, setNodes] = useState<ProxmoxNode[]>([]);
+    const [selectedNode, setSelectedNode] = useState<string>('');
 
     const [vms, setVms] = useState<main.VM[]>([]);
     const [templates, setTemplates] = useState<main.Template[]>([]);
@@ -74,6 +79,7 @@ function App() {
         const restoreSession = async () => {
             const savedToken = localStorage.getItem('vm_manager_token');
             const savedEmail = localStorage.getItem('vm_manager_email');
+            const savedRole = localStorage.getItem('vm_manager_role');
             if (savedToken) {
                 try {
                     let isValid = false;
@@ -94,15 +100,21 @@ function App() {
                         setIsAuthenticated(true);
                         setAuthToken(savedToken);
                         setCurrentUser(savedEmail || '');
+                        if (savedRole) {
+                            setUserRole(savedRole);
+                        }
                         await fetchVMs(savedToken);
                         await fetchTemplates(savedToken);
+                        await fetchNodes(savedToken);
                     } else {
                         localStorage.removeItem('vm_manager_token');
                         localStorage.removeItem('vm_manager_email');
+                        localStorage.removeItem('vm_manager_role');
                     }
                 } catch {
                     localStorage.removeItem('vm_manager_token');
                     localStorage.removeItem('vm_manager_email');
+                    localStorage.removeItem('vm_manager_role');
                 }
             }
             setIsVerifyingSession(false);
@@ -116,6 +128,34 @@ function App() {
             setManagingConnectionsVM(updatedVM || null);
         }
     }, [vms]);
+
+    const fetchNodes = async (tokenOverride?: string) => {
+        const token = tokenOverride || authToken || localStorage.getItem('vm_manager_token') || '';
+        if (!token) return;
+        try {
+            let data: ProxmoxNode[] = [];
+            if (typeof window !== 'undefined' && (window as any).go?.main?.App?.GetNodes) {
+                data = await (window as any).go.main.App.GetNodes(token);
+            } else {
+                let resp: Response;
+                try {
+                    resp = await fetch('/nodes', {
+                        headers: { 'Authorization': token }
+                    });
+                } catch {
+                    resp = await fetch('http://localhost:8080/nodes', {
+                        headers: { 'Authorization': token }
+                    });
+                }
+                if (resp && resp.ok) {
+                    data = await resp.json();
+                }
+            }
+            setNodes(data || []);
+        } catch (err) {
+            console.error('Failed to fetch nodes:', err);
+        }
+    };
 
     const fetchVMs = async (tokenOverride?: string) => {
         const token = tokenOverride || authToken || localStorage.getItem('vm_manager_token') || '';
@@ -179,14 +219,19 @@ function App() {
         }
     };
 
-    const handleLoginSuccess = async (token: string, userEmail: string) => {
+    const handleLoginSuccess = async (token: string, userEmail: string, role?: string) => {
         localStorage.setItem('vm_manager_token', token);
         localStorage.setItem('vm_manager_email', userEmail);
+        if (role) {
+            localStorage.setItem('vm_manager_role', role);
+            setUserRole(role);
+        }
         setAuthToken(token);
         setCurrentUser(userEmail);
         setIsAuthenticated(true);
         await fetchVMs(token);
         await fetchTemplates(token);
+        await fetchNodes(token);
     };
 
     const handleLogout = async () => {
@@ -199,12 +244,16 @@ function App() {
         }
         localStorage.removeItem('vm_manager_token');
         localStorage.removeItem('vm_manager_email');
+        localStorage.removeItem('vm_manager_role');
         setIsAuthenticated(false);
         setAuthToken('');
         setCurrentUser('');
+        setUserRole('');
         setMessage('');
         setVms([]);
         setTemplates([]);
+        setNodes([]);
+        setSelectedNode('');
     };
 
     const executeAction = async (actionFn: (id: string) => Promise<string>, id: string, endpoint?: string) => {
@@ -483,6 +532,10 @@ function App() {
         return <Login onLoginSuccess={handleLoginSuccess} />;
     }
 
+    const filteredVMs = selectedNode 
+        ? vms.filter(v => (v as any).node === selectedNode) 
+        : vms;
+
     return (
         <div className="container">
             <ConfirmModal 
@@ -520,6 +573,7 @@ function App() {
 
             <Header 
                 currentUser={currentUser}
+                userRole={userRole}
                 showNetworkMap={showNetworkMap}
                 onToggleNetworkMap={() => setShowNetworkMap(prev => !prev)}
                 onLogout={handleLogout}
@@ -531,15 +585,24 @@ function App() {
                 </div>
             )}
 
+            <NodesCard 
+                nodes={nodes}
+                isRefreshing={isRefreshing}
+                onRefresh={() => fetchNodes()}
+                selectedNode={selectedNode}
+                onSelectNode={setSelectedNode}
+            />
+
             <CreateVMCard 
                 templates={templates}
                 onCreateVM={handleCreateVM}
             />
 
             <VMTable 
-                vms={vms}
+                vms={filteredVMs}
+                userRole={userRole}
                 isRefreshing={isRefreshing}
-                onRefresh={() => fetchVMs()}
+                onRefresh={() => { fetchVMs(); fetchNodes(); }}
                 onStartVM={handleStartVM}
                 onStopVM={handleStopVM}
                 onOpenConsole={handleOpenConsole}

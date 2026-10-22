@@ -18,6 +18,17 @@ import (
 type AuthResult struct {
 	Token string `json:"token"`
 	Email string `json:"email"`
+	Role  string `json:"role,omitempty"`
+}
+
+type ProxmoxNode struct {
+	Name       string `json:"name"`
+	HostURI    string `json:"host_uri"`
+	Status     string `json:"status"`
+	Version    string `json:"version,omitempty"`
+	TotalVMs   int    `json:"total_vms"`
+	RunningVMs int    `json:"running_vms"`
+	Templates  int    `json:"templates"`
 }
 
 type VMConnection struct {
@@ -32,6 +43,8 @@ type VM struct {
 	Name          string         `json:"name"`
 	Status        string         `json:"status,omitempty"`
 	RAM           int            `json:"ram_mb,omitempty"`
+	Node          string         `json:"node,omitempty"`
+	Owner         string         `json:"owner,omitempty"`
 	Networks      []string       `json:"networks,omitempty"`
 	AvailableNICs []string       `json:"available_nics,omitempty"`
 	Connections   []VMConnection `json:"connections,omitempty"`
@@ -63,6 +76,7 @@ type App struct {
 	ctx              context.Context
 	vms              []VM
 	templates        []Template
+	nodes            []ProxmoxNode
 	consoleModeID    string
 	consoleModeVM    string
 	consoleModeToken string
@@ -70,6 +84,7 @@ type App struct {
 	backendURL       string
 	authToken        string
 	userEmail        string
+	userRole         string
 }
 
 func NewApp() *App {
@@ -666,6 +681,8 @@ func (a *App) Login(email, password string) (*AuthResult, error) {
 	if resp.StatusCode == http.StatusOK {
 		var respData struct {
 			Token string `json:"token"`
+			Role  string `json:"role"`
+			User  string `json:"user"`
 		}
 		if err := json.NewDecoder(resp.Body).Decode(&respData); err != nil {
 			return nil, fmt.Errorf("failed to parse login response: %w", err)
@@ -676,9 +693,11 @@ func (a *App) Login(email, password string) (*AuthResult, error) {
 
 		a.authToken = respData.Token
 		a.userEmail = email
+		a.userRole = respData.Role
 		return &AuthResult{
 			Token: respData.Token,
 			Email: email,
+			Role:  respData.Role,
 		}, nil
 	}
 
@@ -691,6 +710,46 @@ func (a *App) Login(email, password string) (*AuthResult, error) {
 	}
 
 	return nil, fmt.Errorf("login failed with status %d", resp.StatusCode)
+}
+
+func (a *App) GetNodes(token string) ([]ProxmoxNode, error) {
+	if token == "" {
+		token = a.authToken
+	}
+	if token == "" {
+		return []ProxmoxNode{}, fmt.Errorf("unauthorized: missing token")
+	}
+
+	req, err := http.NewRequest("GET", a.backendURL+"/nodes", nil)
+	if err != nil {
+		return []ProxmoxNode{}, err
+	}
+	req.Header.Set("Authorization", token)
+
+	client := &http.Client{Timeout: 10 * time.Second}
+	resp, err := client.Do(req)
+	if err != nil {
+		return []ProxmoxNode{}, fmt.Errorf("failed to reach backend at %s: %v", a.backendURL, err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return []ProxmoxNode{}, fmt.Errorf("failed to fetch nodes: status %d", resp.StatusCode)
+	}
+
+	var nodes []ProxmoxNode
+	if err := json.NewDecoder(resp.Body).Decode(&nodes); err != nil {
+		return []ProxmoxNode{}, fmt.Errorf("failed to parse nodes: %w", err)
+	}
+	if nodes == nil {
+		nodes = []ProxmoxNode{}
+	}
+	a.nodes = nodes
+	return nodes, nil
+}
+
+func (a *App) GetRole() string {
+	return a.userRole
 }
 
 func (a *App) VerifySession(token string) (bool, error) {
@@ -721,4 +780,5 @@ func (a *App) VerifySession(token string) (bool, error) {
 func (a *App) Logout() {
 	a.authToken = ""
 	a.userEmail = ""
+	a.userRole = ""
 }
