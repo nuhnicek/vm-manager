@@ -74,8 +74,8 @@ export function NetworkingModal({
     };
 
     return (
-        <div className="modal-overlay">
-            <div className="modal-content" style={{ maxWidth: '750px', width: '100%' }}>
+        <div className="modal-overlay" onClick={onClose}>
+            <div className="modal-content" style={{ maxWidth: '750px', width: '100%' }} onClick={e => e.stopPropagation()}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <h4 style={{ margin: 0 }}>Správa sítě pro {vm.name}</h4>
                     <button className="btn btn-sm btn-success" onClick={onAddNIC}>+ Přidat síťovou kartu</button>
@@ -138,8 +138,8 @@ export function NetworkingModal({
                 </div>
 
                 {availableVMsToConnect.length > 0 && unusedLocalNICs.length > 0 && (
-                    <form onSubmit={handleConnectSubmit} style={{ display: 'flex', gap: '16px', alignItems: 'flex-end', marginTop: '1.5rem', backgroundColor: 'var(--card-bg-subtle)', padding: '16px', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
-                        <div className="form-group" style={{ flex: 1, marginBottom: 0 }}>
+                    <form onSubmit={handleConnectSubmit} style={{ display: 'flex', gap: '12px', alignItems: 'flex-end', flexWrap: 'wrap', marginTop: '1.5rem', backgroundColor: 'var(--card-bg-subtle)', padding: '16px', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+                        <div className="form-group" style={{ flex: '1 1 140px', minWidth: '120px', marginBottom: 0 }}>
                             <label>Lokální rozhraní:</label>
                             <select value={localNic} onChange={(e) => setLocalNic(e.target.value)} required>
                                 <option value="">-- Vybrat --</option>
@@ -148,7 +148,7 @@ export function NetworkingModal({
                                 ))}
                             </select>
                         </div>
-                        <div className="form-group" style={{ flex: 2, marginBottom: 0 }}>
+                        <div className="form-group" style={{ flex: '2 1 220px', minWidth: '180px', marginBottom: 0 }}>
                             <label>Připojit k VM:</label>
                             <select 
                                 value={connectionTargetId} 
@@ -158,8 +158,9 @@ export function NetworkingModal({
                                 <option value="">-- Vybrat cílový virtuální stroj --</option>
                                 {availableVMsToConnect.map(v => {
                                     const uNics = getUnusedNICs(v);
+                                    const optKey = `${(v as any).node || 'pve'}-${v.id}`;
                                     return (
-                                        <option key={v.id} value={String(v.id)} disabled={uNics.length === 0}>
+                                        <option key={optKey} value={String(v.id)} disabled={uNics.length === 0}>
                                             {v.name} (VMID: {v.id}, {uNics.length} rozhraní k dispozici)
                                         </option>
                                     );
@@ -167,7 +168,7 @@ export function NetworkingModal({
                             </select>
                         </div>
                         {connectionTargetId && unusedTargetNICs.length > 0 && (
-                            <div className="form-group" style={{ flex: 1, marginBottom: 0 }}>
+                            <div className="form-group" style={{ flex: '1 1 140px', minWidth: '120px', marginBottom: 0 }}>
                                 <label>Cílové rozhraní:</label>
                                 <select value={targetNic} onChange={(e) => setTargetNic(e.target.value)} required>
                                     <option value="">-- Vybrat --</option>

@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/creack/pty"
@@ -54,6 +55,7 @@ type Template struct {
 	ID   uint64 `json:"id"`
 	UUID string `json:"uuid,omitempty"`
 	Name string `json:"name"`
+	Node string `json:"node,omitempty"`
 }
 
 func vmMatches(vm VM, id string) bool {
@@ -374,12 +376,40 @@ func (a *App) CreateVMFromTemplate(name string, templateID string) (*VM, error) 
 	}
 
 	var selectedTplID int
-	if id, err := strconv.Atoi(templateID); err == nil {
+	var selectedNode string
+
+	if strings.Contains(templateID, ":") {
+		parts := strings.SplitN(templateID, ":", 2)
+		if _, err := strconv.Atoi(parts[0]); err != nil {
+			selectedNode = parts[0]
+			if id, err := strconv.Atoi(parts[1]); err == nil {
+				selectedTplID = id
+			}
+		} else {
+			if id, err := strconv.Atoi(parts[0]); err == nil {
+				selectedTplID = id
+			}
+		}
+	} else if id, err := strconv.Atoi(templateID); err == nil {
 		selectedTplID = id
-	} else {
+	}
+
+	if selectedTplID == 0 {
 		for _, tpl := range a.templates {
-			if fmt.Sprintf("%d", tpl.ID) == templateID || tpl.Name == templateID || tpl.UUID == templateID {
+			if fmt.Sprintf("%d", tpl.ID) == templateID || tpl.Name == templateID || tpl.UUID == templateID || fmt.Sprintf("%s:%d", tpl.Node, tpl.ID) == templateID || fmt.Sprintf("%d:%s", tpl.ID, tpl.Name) == templateID {
 				selectedTplID = int(tpl.ID)
+				if selectedNode == "" {
+					selectedNode = tpl.Node
+				}
+				break
+			}
+		}
+	}
+
+	if selectedNode == "" {
+		for _, tpl := range a.templates {
+			if int(tpl.ID) == selectedTplID {
+				selectedNode = tpl.Node
 				break
 			}
 		}
@@ -392,6 +422,9 @@ func (a *App) CreateVMFromTemplate(name string, templateID string) (*VM, error) 
 	payload := map[string]interface{}{
 		"name":        name,
 		"template_id": selectedTplID,
+	}
+	if selectedNode != "" {
+		payload["node"] = selectedNode
 	}
 	bodyBytes, err := json.Marshal(payload)
 	if err != nil {
@@ -428,6 +461,7 @@ func (a *App) CreateVMFromTemplate(name string, templateID string) (*VM, error) 
 	newVM := &VM{
 		Name: name,
 		UUID: vmUUID,
+		Node: selectedNode,
 	}
 	return newVM, nil
 }
@@ -441,12 +475,33 @@ func (a *App) CreateVMOnNode(name string, templateID string, node string) (*VM, 
 	}
 
 	var selectedTplID int
-	if id, err := strconv.Atoi(templateID); err == nil {
+	selectedNode := node
+
+	if strings.Contains(templateID, ":") {
+		parts := strings.SplitN(templateID, ":", 2)
+		if _, err := strconv.Atoi(parts[0]); err != nil {
+			if selectedNode == "" {
+				selectedNode = parts[0]
+			}
+			if id, err := strconv.Atoi(parts[1]); err == nil {
+				selectedTplID = id
+			}
+		} else {
+			if id, err := strconv.Atoi(parts[0]); err == nil {
+				selectedTplID = id
+			}
+		}
+	} else if id, err := strconv.Atoi(templateID); err == nil {
 		selectedTplID = id
-	} else {
+	}
+
+	if selectedTplID == 0 {
 		for _, tpl := range a.templates {
-			if fmt.Sprintf("%d", tpl.ID) == templateID || tpl.Name == templateID || tpl.UUID == templateID {
+			if fmt.Sprintf("%d", tpl.ID) == templateID || tpl.Name == templateID || tpl.UUID == templateID || fmt.Sprintf("%s:%d", tpl.Node, tpl.ID) == templateID || fmt.Sprintf("%d:%s", tpl.ID, tpl.Name) == templateID {
 				selectedTplID = int(tpl.ID)
+				if selectedNode == "" {
+					selectedNode = tpl.Node
+				}
 				break
 			}
 		}
@@ -460,8 +515,8 @@ func (a *App) CreateVMOnNode(name string, templateID string, node string) (*VM, 
 		"name":        name,
 		"template_id": selectedTplID,
 	}
-	if node != "" {
-		payload["node"] = node
+	if selectedNode != "" {
+		payload["node"] = selectedNode
 	}
 	bodyBytes, err := json.Marshal(payload)
 	if err != nil {

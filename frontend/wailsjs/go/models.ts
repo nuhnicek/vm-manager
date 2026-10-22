@@ -44,6 +44,7 @@ export namespace main {
 	    id: number;
 	    uuid?: string;
 	    name: string;
+	    node?: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new Template(source);
@@ -54,6 +55,7 @@ export namespace main {
 	        this.id = source["id"];
 	        this.uuid = source["uuid"];
 	        this.name = source["name"];
+	        this.node = source["node"];
 	    }
 	}
 	export class VMConnection {

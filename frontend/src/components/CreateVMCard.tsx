@@ -18,13 +18,14 @@ export function CreateVMCard({ templates, nodes = [], onCreateVM, userRole }: Cr
     useEffect(() => {
         if (templates.length > 0) {
             const exists = templates.some(t => {
-                const nodePart = (t as any).node || 'pve';
-                return `${nodePart}:${t.id}` === selectedTemplateKey;
+                const nodePart = (t as any).node || '';
+                const val = nodePart ? `${nodePart}:${t.id}` : `${t.id}:${t.name}`;
+                return val === selectedTemplateKey;
             });
             if (!selectedTemplateKey || !exists) {
                 const first = templates[0];
-                const nodePart = (first as any).node || 'pve';
-                setSelectedTemplateKey(`${nodePart}:${first.id}`);
+                const nodePart = (first as any).node || '';
+                setSelectedTemplateKey(nodePart ? `${nodePart}:${first.id}` : `${first.id}:${first.name}`);
             }
         } else {
             setSelectedTemplateKey('');
@@ -36,10 +37,27 @@ export function CreateVMCard({ templates, nodes = [], onCreateVM, userRole }: Cr
         if (!selectedTemplateKey || isSubmitting) return;
         setIsSubmitting(true);
         try {
-            const [tplNode, tplId] = selectedTemplateKey.includes(':')
-                ? selectedTemplateKey.split(':')
-                : ['', selectedTemplateKey];
-            await onCreateVM(name, tplId, selectedNode || tplNode);
+            let tplNode = selectedNode;
+            let tplId = selectedTemplateKey;
+            if (selectedTemplateKey.includes(':')) {
+                const parts = selectedTemplateKey.split(':');
+                if (isNaN(Number(parts[0]))) {
+                    if (!tplNode) tplNode = parts[0];
+                    tplId = parts[1];
+                } else {
+                    tplId = parts[0];
+                }
+            }
+            if (!tplNode) {
+                const found = templates.find(t => {
+                    const np = (t as any).node || '';
+                    return `${np}:${t.id}` === selectedTemplateKey || `${t.id}:${t.name}` === selectedTemplateKey || String(t.id) === selectedTemplateKey;
+                });
+                if (found && (found as any).node) {
+                    tplNode = (found as any).node;
+                }
+            }
+            await onCreateVM(name, tplId, tplNode);
             setName('');
         } finally {
             setIsSubmitting(false);
@@ -69,10 +87,10 @@ export function CreateVMCard({ templates, nodes = [], onCreateVM, userRole }: Cr
                         disabled={isSubmitting || templates.length === 0}
                     >
                         {templates.map(t => {
-                            const nodePart = (t as any).node || 'pve';
-                            const optionValue = `${nodePart}:${t.id}`;
+                            const nodePart = (t as any).node || '';
+                            const optionValue = nodePart ? `${nodePart}:${t.id}` : `${t.id}:${t.name}`;
                             const isTeacher = userRole === 'teacher';
-                            const label = isTeacher
+                            const label = isTeacher && nodePart
                                 ? `${t.name} (VMID: ${t.id}, Uzel: ${nodePart})`
                                 : `${t.name} (VMID: ${t.id})`;
                             return (

@@ -11,6 +11,7 @@ export interface ProxmoxNode {
 export interface LabVMTemplate {
     name: string;
     template_id: number;
+    node?: string;
     description: string;
     ram_mb?: number;
     default_user?: string;

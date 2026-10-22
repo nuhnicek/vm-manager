@@ -301,16 +301,24 @@ export function CreateLabModal({ isOpen, onClose, templates, token, onLabCreated
                                     <div>
                                         <label style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Výchozí šablona</label>
                                         <select 
-                                            value={vm.template_id}
-                                            onChange={e => handleUpdateVM(idx, 'template_id', Number(e.target.value))}
+                                            value={`${(vm as any).node || ((templates.find(t => Number(t.id) === vm.template_id) as any)?.node) || 'pve'}:${vm.template_id}`}
+                                            onChange={e => {
+                                                const val = e.target.value;
+                                                const [tplNode, tplId] = val.includes(':') ? val.split(':') : ['', val];
+                                                setVms(prev => prev.map((item, i) => i === idx ? { ...item, template_id: Number(tplId), node: tplNode } : item));
+                                            }}
                                         >
-                                            {templates.map(t => (
-                                                <option key={`${(t as any).node || 'pve'}-${t.id}`} value={Number(t.id)}>
-                                                    {t.name} (VMID: {t.id}{(t as any).node ? `, Uzel: ${(t as any).node}` : ''})
-                                                </option>
-                                            ))}
+                                            {templates.map(t => {
+                                                const nodePart = (t as any).node || 'pve';
+                                                const optVal = `${nodePart}:${t.id}`;
+                                                return (
+                                                    <option key={optVal} value={optVal}>
+                                                        {t.name} (VMID: {t.id}, Uzel: {nodePart})
+                                                    </option>
+                                                );
+                                            })}
                                             {templates.length === 0 && (
-                                                <option value={101}>eve-ng (VMID 101)</option>
+                                                <option value="pve:101">eve-ng (VMID 101)</option>
                                             )}
                                         </select>
                                     </div>

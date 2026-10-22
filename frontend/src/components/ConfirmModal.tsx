@@ -9,8 +9,8 @@ export function ConfirmModal({ isOpen, message, onConfirm, onCancel }: ConfirmMo
     if (!isOpen) return null;
 
     return (
-        <div className="modal-overlay">
-            <div className="modal-content">
+        <div className="modal-overlay" onClick={onCancel}>
+            <div className="modal-content" onClick={e => e.stopPropagation()}>
                 <h4>Potvrzení akce</h4>
                 <p>{message}</p>
                 <div className="modal-actions">

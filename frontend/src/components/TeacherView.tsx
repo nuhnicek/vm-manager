@@ -249,10 +249,10 @@ export function TeacherView({
                             {deployingLab.description}
                         </p>
                         <form onSubmit={handleDeploySubmit}>
-                            <div className="form-group">
+                            <div className="form-group" style={{ marginBottom: '14px' }}>
                                 <label>Cílový student / Příjemce</label>
                                 <select 
-                                    value={deployStudentUUID}
+                                    value={deployStudentUUID} 
                                     onChange={e => setDeployStudentUUID(e.target.value)}
                                 >
                                     <option value="">Já sám (Učitelské prostředí)</option>
@@ -263,7 +263,7 @@ export function TeacherView({
                                     ))}
                                 </select>
                             </div>
-                            <div className="form-group">
+                            <div className="form-group" style={{ marginBottom: '14px' }}>
                                 <label>Prefix instance (volitelné)</label>
                                 <input 
                                     type="text"
