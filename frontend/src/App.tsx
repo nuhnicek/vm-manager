@@ -124,7 +124,9 @@ function App() {
                         }
                         await fetchVMs(savedToken);
                         await fetchTemplates(savedToken);
-                        await fetchNodes(savedToken);
+                        if (savedRole === 'teacher') {
+                            await fetchNodes(savedToken);
+                        }
                     } else {
                         localStorage.removeItem('vm_manager_token');
                         localStorage.removeItem('vm_manager_email');
@@ -253,7 +255,9 @@ function App() {
         setIsAuthenticated(true);
         await fetchVMs(token);
         await fetchTemplates(token);
-        await fetchNodes(token);
+        if (role === 'teacher') {
+            await fetchNodes(token);
+        }
     };
 
     const handleLogout = async () => {
@@ -409,7 +413,9 @@ function App() {
             }
             setMessage(`Virtuální stroj ${name} byl úspěšně vytvořen`);
             await fetchVMs();
-            await fetchNodes();
+            if (userRole === 'teacher') {
+                await fetchNodes();
+            }
         } catch (error: any) {
             setMessage(`Chyba: ${error?.message || error}`);
         }
@@ -629,25 +635,28 @@ function App() {
                 />
             ) : (
                 <>
-                    <NodesCard 
-                        nodes={nodes}
-                        isRefreshing={isRefreshing}
-                        onRefresh={() => fetchNodes()}
-                        selectedNode={selectedNode}
-                        onSelectNode={setSelectedNode}
-                    />
+                    {userRole === 'teacher' && (
+                        <NodesCard 
+                            nodes={nodes}
+                            isRefreshing={isRefreshing}
+                            onRefresh={() => fetchNodes()}
+                            selectedNode={selectedNode}
+                            onSelectNode={setSelectedNode}
+                        />
+                    )}
 
                     <CreateVMCard 
                         templates={templates}
                         nodes={nodes}
                         onCreateVM={handleCreateVM}
+                        userRole={userRole}
                     />
 
                     <VMTable 
                         vms={filteredVMs}
                         userRole={userRole}
                         isRefreshing={isRefreshing}
-                        onRefresh={() => { fetchVMs(); fetchNodes(); }}
+                        onRefresh={() => { fetchVMs(); if (userRole === 'teacher') fetchNodes(); }}
                         onStartVM={handleStartVM}
                         onStopVM={handleStopVM}
                         onOpenConsole={handleOpenConsole}

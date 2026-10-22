@@ -49,7 +49,7 @@ export function VMTable({
                         <tr>
                             <th>VMID</th>
                             <th>Název</th>
-                            <th>Uzel</th>
+                            {isTeacher && <th>Uzel</th>}
                             {isTeacher && <th>Vlastník</th>}
                             <th>Stav</th>
                             <th>Síťová propojení</th>
@@ -68,11 +68,13 @@ export function VMTable({
                                         </span>
                                     </td>
                                     <td className="fw-500">{vm.name}</td>
-                                    <td>
-                                        <span className="mono-tag">
-                                            {(vm as any).node || 'pve'}
-                                        </span>
-                                    </td>
+                                    {isTeacher && (
+                                        <td>
+                                            <span className="mono-tag">
+                                                {(vm as any).node || 'pve'}
+                                            </span>
+                                        </td>
+                                    )}
                                     {isTeacher && (
                                         <td style={{ fontSize: '12px', fontFamily: 'monospace', color: 'var(--text-muted)' }}>
                                             {(vm as any).owner ? (vm as any).owner.slice(0, 8) + '...' : 'Systém'}
@@ -142,7 +144,7 @@ export function VMTable({
                         })}
                         {vms.length === 0 && (
                             <tr>
-                                <td colSpan={isTeacher ? 7 : 6} className="text-center text-muted" style={{ padding: '32px' }}>
+                                <td colSpan={isTeacher ? 7 : 5} className="text-center text-muted" style={{ padding: '32px' }}>
                                     V clusteru nebyly nalezeny žádné virtuální stroje pro tento účet.
                                 </td>
                             </tr>

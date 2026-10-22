@@ -61,10 +61,10 @@ export function Header({
                         {currentUser}
                     </span>
                 )}
-                {userRole && (
-                    <span className={`status-badge ${userRole === 'teacher' ? 'status-running' : 'status-stopped'}`}>
+                {isTeacher && (
+                    <span className="status-badge status-running">
                         <span className="status-badge-dot"></span>
-                        {userRole === 'teacher' ? 'UČITEL' : 'STUDENT'}
+                        UČITEL
                     </span>
                 )}
                 <button 

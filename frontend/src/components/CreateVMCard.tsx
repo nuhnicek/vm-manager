@@ -6,9 +6,10 @@ interface CreateVMCardProps {
     templates: main.Template[];
     nodes?: ProxmoxNode[];
     onCreateVM: (name: string, templateId: string, node?: string) => Promise<void>;
+    userRole?: string;
 }
 
-export function CreateVMCard({ templates, nodes = [], onCreateVM }: CreateVMCardProps) {
+export function CreateVMCard({ templates, nodes = [], onCreateVM, userRole }: CreateVMCardProps) {
     const [name, setName] = useState('');
     const [selectedTemplate, setSelectedTemplate] = useState('');
     const [selectedNode, setSelectedNode] = useState('');
@@ -64,21 +65,23 @@ export function CreateVMCard({ templates, nodes = [], onCreateVM }: CreateVMCard
                         )}
                     </select>
                 </div>
-                <div className="form-group">
-                    <label>Cílový uzel:</label>
-                    <select 
-                        value={selectedNode}
-                        onChange={(e) => setSelectedNode(e.target.value)}
-                        disabled={isSubmitting}
-                    >
-                        <option value="">Automatické vyvážení zátěže (Doporučeno)</option>
-                        {nodes.map(n => (
-                            <option key={n.name} value={n.name}>
-                                {n.name} [{n.status.toUpperCase()}]
-                            </option>
-                        ))}
-                    </select>
-                </div>
+                {userRole === 'teacher' && nodes.length > 0 && (
+                    <div className="form-group">
+                        <label>Cílový uzel:</label>
+                        <select 
+                            value={selectedNode}
+                            onChange={(e) => setSelectedNode(e.target.value)}
+                            disabled={isSubmitting}
+                        >
+                            <option value="">Automatické vyvážení zátěže (Doporučeno)</option>
+                            {nodes.map(n => (
+                                <option key={n.name} value={n.name}>
+                                    {n.name} [{n.status.toUpperCase()}]
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+                )}
                 <button 
                     type="submit" 
                     className="btn btn-primary"
