@@ -305,8 +305,8 @@ export function CreateLabModal({ isOpen, onClose, templates, token, onLabCreated
                                             onChange={e => handleUpdateVM(idx, 'template_id', Number(e.target.value))}
                                         >
                                             {templates.map(t => (
-                                                <option key={t.id} value={Number(t.id)}>
-                                                    {t.name} (VMID: {t.id})
+                                                <option key={`${(t as any).node || 'pve'}-${t.id}`} value={Number(t.id)}>
+                                                    {t.name} (VMID: {t.id}{(t as any).node ? `, Uzel: ${(t as any).node}` : ''})
                                                 </option>
                                             ))}
                                             {templates.length === 0 && (

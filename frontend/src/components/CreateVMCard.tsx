@@ -11,22 +11,35 @@ interface CreateVMCardProps {
 
 export function CreateVMCard({ templates, nodes = [], onCreateVM, userRole }: CreateVMCardProps) {
     const [name, setName] = useState('');
-    const [selectedTemplate, setSelectedTemplate] = useState('');
+    const [selectedTemplateKey, setSelectedTemplateKey] = useState('');
     const [selectedNode, setSelectedNode] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     useEffect(() => {
-        if (templates.length > 0 && !selectedTemplate) {
-            setSelectedTemplate(String(templates[0].id));
+        if (templates.length > 0) {
+            const exists = templates.some(t => {
+                const nodePart = (t as any).node || 'pve';
+                return `${nodePart}:${t.id}` === selectedTemplateKey;
+            });
+            if (!selectedTemplateKey || !exists) {
+                const first = templates[0];
+                const nodePart = (first as any).node || 'pve';
+                setSelectedTemplateKey(`${nodePart}:${first.id}`);
+            }
+        } else {
+            setSelectedTemplateKey('');
         }
-    }, [templates, selectedTemplate]);
+    }, [templates, selectedTemplateKey]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!selectedTemplate || isSubmitting) return;
+        if (!selectedTemplateKey || isSubmitting) return;
         setIsSubmitting(true);
         try {
-            await onCreateVM(name, selectedTemplate, selectedNode);
+            const [tplNode, tplId] = selectedTemplateKey.includes(':')
+                ? selectedTemplateKey.split(':')
+                : ['', selectedTemplateKey];
+            await onCreateVM(name, tplId, selectedNode || tplNode);
             setName('');
         } finally {
             setIsSubmitting(false);
@@ -51,15 +64,23 @@ export function CreateVMCard({ templates, nodes = [], onCreateVM, userRole }: Cr
                 <div className="form-group">
                     <label>Šablona:</label>
                     <select 
-                        value={selectedTemplate} 
-                        onChange={(e) => setSelectedTemplate(e.target.value)}
+                        value={selectedTemplateKey} 
+                        onChange={(e) => setSelectedTemplateKey(e.target.value)}
                         disabled={isSubmitting || templates.length === 0}
                     >
-                        {templates.map(t => (
-                            <option key={t.id} value={String(t.id)}>
-                                {t.name} (VMID: {t.id})
-                            </option>
-                        ))}
+                        {templates.map(t => {
+                            const nodePart = (t as any).node || 'pve';
+                            const optionValue = `${nodePart}:${t.id}`;
+                            const isTeacher = userRole === 'teacher';
+                            const label = isTeacher
+                                ? `${t.name} (VMID: ${t.id}, Uzel: ${nodePart})`
+                                : `${t.name} (VMID: ${t.id})`;
+                            return (
+                                <option key={optionValue} value={optionValue}>
+                                    {label}
+                                </option>
+                            );
+                        })}
                         {templates.length === 0 && (
                             <option value="">Žádné šablony nejsou k dispozici</option>
                         )}
