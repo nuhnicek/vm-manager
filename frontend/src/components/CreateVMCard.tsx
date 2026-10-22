@@ -1,14 +1,17 @@
 import { useState, useEffect } from 'react';
 import { main } from '../../wailsjs/go/models';
+import { ProxmoxNode } from '../types';
 
 interface CreateVMCardProps {
     templates: main.Template[];
-    onCreateVM: (name: string, templateId: string) => Promise<void>;
+    nodes?: ProxmoxNode[];
+    onCreateVM: (name: string, templateId: string, node?: string) => Promise<void>;
 }
 
-export function CreateVMCard({ templates, onCreateVM }: CreateVMCardProps) {
+export function CreateVMCard({ templates, nodes = [], onCreateVM }: CreateVMCardProps) {
     const [name, setName] = useState('');
     const [selectedTemplate, setSelectedTemplate] = useState('');
+    const [selectedNode, setSelectedNode] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     useEffect(() => {
@@ -22,7 +25,7 @@ export function CreateVMCard({ templates, onCreateVM }: CreateVMCardProps) {
         if (!selectedTemplate || isSubmitting) return;
         setIsSubmitting(true);
         try {
-            await onCreateVM(name, selectedTemplate);
+            await onCreateVM(name, selectedTemplate, selectedNode);
             setName('');
         } finally {
             setIsSubmitting(false);
@@ -59,6 +62,21 @@ export function CreateVMCard({ templates, onCreateVM }: CreateVMCardProps) {
                         {templates.length === 0 && (
                             <option value="">No templates available</option>
                         )}
+                    </select>
+                </div>
+                <div className="form-group">
+                    <label>Target Node:</label>
+                    <select 
+                        value={selectedNode}
+                        onChange={(e) => setSelectedNode(e.target.value)}
+                        disabled={isSubmitting}
+                    >
+                        <option value="">Auto-Balance (Recommended)</option>
+                        {nodes.map(n => (
+                            <option key={n.name} value={n.name}>
+                                {n.name} [{n.status}]
+                            </option>
+                        ))}
                     </select>
                 </div>
                 <button 

@@ -16,6 +16,7 @@ import { NetworkingModal } from './components/NetworkingModal';
 import { NetworkTopologyModal } from './components/NetworkTopologyModal';
 import { ConfirmModal } from './components/ConfirmModal';
 import { NodesCard, ProxmoxNode } from './components/NodesCard';
+import { TeacherView } from './components/TeacherView';
 
 import './App.css';
 
@@ -26,6 +27,7 @@ function App() {
     const [isVerifyingSession, setIsVerifyingSession] = useState(true);
     const [currentUser, setCurrentUser] = useState<string>('');
     const [userRole, setUserRole] = useState<string>('');
+    const [currentView, setCurrentView] = useState<'student' | 'teacher'>('student');
     const [authToken, setAuthToken] = useState<string>('');
 
     const [nodes, setNodes] = useState<ProxmoxNode[]>([]);
@@ -102,6 +104,9 @@ function App() {
                         setCurrentUser(savedEmail || '');
                         if (savedRole) {
                             setUserRole(savedRole);
+                            if (savedRole === 'teacher') {
+                                setCurrentView('teacher');
+                            }
                         }
                         await fetchVMs(savedToken);
                         await fetchTemplates(savedToken);
@@ -225,6 +230,9 @@ function App() {
         if (role) {
             localStorage.setItem('vm_manager_role', role);
             setUserRole(role);
+            if (role === 'teacher') {
+                setCurrentView('teacher');
+            }
         }
         setAuthToken(token);
         setCurrentUser(userEmail);
@@ -340,21 +348,26 @@ function App() {
         }
     };
 
-    const handleCreateVM = async (name: string, templateId: string) => {
+    const handleCreateVM = async (name: string, templateId: string, node?: string) => {
         if (!name.trim()) {
             setMessage('Error: VM name cannot be empty');
             return;
         }
         try {
-            if (typeof window !== 'undefined' && (window as any).go?.main?.App?.CreateVMFromTemplate) {
+            if (typeof window !== 'undefined' && (window as any).go?.main?.App?.CreateVMOnNode && node) {
+                await (window as any).go.main.App.CreateVMOnNode(name, templateId, node);
+            } else if (typeof window !== 'undefined' && (window as any).go?.main?.App?.CreateVMFromTemplate) {
                 await CreateVMFromTemplate(name, templateId);
             } else {
                 const token = authToken || localStorage.getItem('vm_manager_token') || '';
                 const templateNum = parseInt(templateId, 10);
-                const payload = {
+                const payload: any = {
                     name,
                     template_id: isNaN(templateNum) ? templateId : templateNum
                 };
+                if (node) {
+                    payload.node = node;
+                }
                 let resp: Response;
                 try {
                     resp = await fetch('/vms/create', {
@@ -382,6 +395,7 @@ function App() {
             }
             setMessage(`Successfully created VM: ${name}`);
             await fetchVMs();
+            await fetchNodes();
         } catch (error: any) {
             setMessage(`Error: ${error?.message || error}`);
         }
@@ -574,6 +588,8 @@ function App() {
             <Header 
                 currentUser={currentUser}
                 userRole={userRole}
+                currentView={currentView}
+                onViewChange={setCurrentView}
                 showNetworkMap={showNetworkMap}
                 onToggleNetworkMap={() => setShowNetworkMap(prev => !prev)}
                 onLogout={handleLogout}
@@ -585,30 +601,45 @@ function App() {
                 </div>
             )}
 
-            <NodesCard 
-                nodes={nodes}
-                isRefreshing={isRefreshing}
-                onRefresh={() => fetchNodes()}
-                selectedNode={selectedNode}
-                onSelectNode={setSelectedNode}
-            />
+            {userRole === 'teacher' && currentView === 'teacher' ? (
+                <TeacherView 
+                    token={authToken}
+                    nodes={nodes}
+                    templates={templates}
+                    vms={vms}
+                    onRefreshNodes={fetchNodes}
+                    onRefreshVMs={fetchVMs}
+                    onMessage={setMessage}
+                />
+            ) : (
+                <>
+                    <NodesCard 
+                        nodes={nodes}
+                        isRefreshing={isRefreshing}
+                        onRefresh={() => fetchNodes()}
+                        selectedNode={selectedNode}
+                        onSelectNode={setSelectedNode}
+                    />
 
-            <CreateVMCard 
-                templates={templates}
-                onCreateVM={handleCreateVM}
-            />
+                    <CreateVMCard 
+                        templates={templates}
+                        nodes={nodes}
+                        onCreateVM={handleCreateVM}
+                    />
 
-            <VMTable 
-                vms={filteredVMs}
-                userRole={userRole}
-                isRefreshing={isRefreshing}
-                onRefresh={() => { fetchVMs(); fetchNodes(); }}
-                onStartVM={handleStartVM}
-                onStopVM={handleStopVM}
-                onOpenConsole={handleOpenConsole}
-                onManageNetworking={(vm) => setManagingConnectionsVM(vm)}
-                onDeleteVM={handleDeleteVM}
-            />
+                    <VMTable 
+                        vms={filteredVMs}
+                        userRole={userRole}
+                        isRefreshing={isRefreshing}
+                        onRefresh={() => { fetchVMs(); fetchNodes(); }}
+                        onStartVM={handleStartVM}
+                        onStopVM={handleStopVM}
+                        onOpenConsole={handleOpenConsole}
+                        onManageNetworking={(vm) => setManagingConnectionsVM(vm)}
+                        onDeleteVM={handleDeleteVM}
+                    />
+                </>
+            )}
         </div>
     );
 }

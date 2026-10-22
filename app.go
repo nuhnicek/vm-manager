@@ -432,6 +432,73 @@ func (a *App) CreateVMFromTemplate(name string, templateID string) (*VM, error) 
 	return newVM, nil
 }
 
+func (a *App) CreateVMOnNode(name string, templateID string, node string) (*VM, error) {
+	if name == "" {
+		return nil, fmt.Errorf("VM name cannot be empty")
+	}
+	if a.authToken == "" {
+		return nil, fmt.Errorf("unauthorized: missing token")
+	}
+
+	var selectedTplID int
+	if id, err := strconv.Atoi(templateID); err == nil {
+		selectedTplID = id
+	} else {
+		for _, tpl := range a.templates {
+			if fmt.Sprintf("%d", tpl.ID) == templateID || tpl.Name == templateID || tpl.UUID == templateID {
+				selectedTplID = int(tpl.ID)
+				break
+			}
+		}
+	}
+
+	if selectedTplID == 0 {
+		return nil, fmt.Errorf("invalid template ID: %s", templateID)
+	}
+
+	payload := map[string]interface{}{
+		"name":        name,
+		"template_id": selectedTplID,
+	}
+	if node != "" {
+		payload["node"] = node
+	}
+	bodyBytes, err := json.Marshal(payload)
+	if err != nil {
+		return nil, fmt.Errorf("failed to encode create VM request: %w", err)
+	}
+
+	req, err := http.NewRequest("POST", a.backendURL+"/vms/create", bytes.NewBuffer(bodyBytes))
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", a.authToken)
+
+	client := &http.Client{Timeout: 3 * time.Minute}
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to reach backend at %s: %v", a.backendURL, err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("backend returned status %d", resp.StatusCode)
+	}
+
+	var vmUUID string
+	if err := json.NewDecoder(resp.Body).Decode(&vmUUID); err != nil {
+		vmUUID = fmt.Sprintf("vm-%d", time.Now().Unix())
+	}
+
+	newVM := &VM{
+		Name: name,
+		Node: node,
+		UUID: vmUUID,
+	}
+	return newVM, nil
+}
+
 func (a *App) StartPTY() error {
 	if a.consoleModeVM == "" {
 		return fmt.Errorf("not in console mode")

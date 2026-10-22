@@ -1,15 +1,48 @@
 interface HeaderProps {
     currentUser: string;
     userRole?: string;
+    currentView: 'student' | 'teacher';
+    onViewChange: (view: 'student' | 'teacher') => void;
     showNetworkMap: boolean;
     onToggleNetworkMap: () => void;
     onLogout: () => void;
 }
 
-export function Header({ currentUser, userRole, showNetworkMap, onToggleNetworkMap, onLogout }: HeaderProps) {
+export function Header({
+    currentUser,
+    userRole,
+    currentView,
+    onViewChange,
+    showNetworkMap,
+    onToggleNetworkMap,
+    onLogout
+}: HeaderProps) {
+    const isTeacher = userRole === 'teacher';
+
     return (
         <header className="header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <h2>Virtual Machine Manager</h2>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                <h2 style={{ margin: 0 }}>Virtual Machine Manager</h2>
+                {isTeacher && (
+                    <div style={{ display: 'flex', background: '#e5e7eb', padding: '3px', borderRadius: '6px', gap: '4px' }}>
+                        <button 
+                            className={`btn btn-sm ${currentView === 'student' ? 'btn-primary' : 'btn-secondary'}`}
+                            onClick={() => onViewChange('student')}
+                            style={{ padding: '3px 10px', fontSize: '12px' }}
+                        >
+                            My VMs
+                        </button>
+                        <button 
+                            className={`btn btn-sm ${currentView === 'teacher' ? 'btn-primary' : 'btn-secondary'}`}
+                            onClick={() => onViewChange('teacher')}
+                            style={{ padding: '3px 10px', fontSize: '12px' }}
+                        >
+                            Teacher Dashboard
+                        </button>
+                    </div>
+                )}
+            </div>
+
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 {currentUser && (
                     <span className="user-badge" title="Authenticated session">
