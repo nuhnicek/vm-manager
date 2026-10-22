@@ -32,36 +32,36 @@
 }
 
 [data-theme='dark'] {
-  --primary-color: #2f81f7;
-  --primary-hover: #388bfd;
-  --primary-subtle: rgba(56, 139, 253, 0.12);
-  --success-color: #238636;
-  --success-hover: #2ea043;
-  --success-text: #3fb950;
-  --success-subtle: rgba(46, 160, 67, 0.15);
-  --danger-color: #da3633;
-  --danger-hover: #f85149;
-  --danger-text: #f85149;
-  --danger-subtle: rgba(248, 81, 73, 0.15);
-  --warning-color: #9e6a03;
-  --warning-hover: #bb8009;
-  --warning-text: #d29922;
-  --warning-subtle: rgba(210, 153, 34, 0.15);
-  --bg-color: #0d1117;
-  --card-bg: #161b22;
-  --card-bg-subtle: #21262d;
-  --text-main: #f0f6fc;
-  --text-muted: #8b949e;
-  --border-color: #30363d;
-  --border-subtle: #21262d;
+  --primary-color: #3b82f6;
+  --primary-hover: #2563eb;
+  --primary-subtle: rgba(59, 130, 246, 0.12);
+  --success-color: #22c55e;
+  --success-hover: #16a34a;
+  --success-text: #22c55e;
+  --success-subtle: rgba(34, 197, 94, 0.12);
+  --danger-color: #ef4444;
+  --danger-hover: #dc2626;
+  --danger-text: #ef4444;
+  --danger-subtle: rgba(239, 68, 68, 0.12);
+  --warning-color: #f59e0b;
+  --warning-hover: #d97706;
+  --warning-text: #f59e0b;
+  --warning-subtle: rgba(245, 158, 11, 0.12);
+  --bg-color: #121212;
+  --card-bg: #1c1c1c;
+  --card-bg-subtle: #242424;
+  --text-main: #f0f0f0;
+  --text-muted: #8e8e8e;
+  --border-color: #333333;
+  --border-subtle: #262626;
   --card-shadow: none;
   --card-hover-shadow: none;
-  --input-bg: #0d1117;
-  --input-border: #30363d;
-  --badge-bg: #21262d;
-  --table-header-bg: #161b22;
-  --table-row-hover: #1c2128;
-  --code-bg: #21262d;
+  --input-bg: #141414;
+  --input-border: #333333;
+  --badge-bg: #262626;
+  --table-header-bg: #181818;
+  --table-row-hover: #222222;
+  --code-bg: #262626;
 }
 
 body {
@@ -398,7 +398,7 @@ body {
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: rgba(1, 4, 9, 0.75);
+  background-color: rgba(0, 0, 0, 0.75);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -413,7 +413,7 @@ body {
   padding: 20px;
   max-width: 500px;
   width: 100%;
-  box-shadow: 0 8px 24px rgba(1, 4, 9, 0.4);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
 }
 
 .modal h3 {
