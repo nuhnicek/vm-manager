@@ -34,21 +34,21 @@ export function CreateVMCard({ templates, nodes = [], onCreateVM }: CreateVMCard
 
     return (
         <div className="card">
-            <h3>Create New VM</h3>
+            <h3>Vytvořit nový virtuální stroj</h3>
             <form className="create-form" onSubmit={handleSubmit}>
                 <div className="form-group">
-                    <label>Name:</label>
+                    <label>Název VM:</label>
                     <input 
                         type="text" 
                         value={name} 
                         onChange={(e) => setName(e.target.value)} 
-                        placeholder="my-new-vm"
+                        placeholder="např. debian-lab1"
                         disabled={isSubmitting}
                         required
                     />
                 </div>
                 <div className="form-group">
-                    <label>Template:</label>
+                    <label>Šablona:</label>
                     <select 
                         value={selectedTemplate} 
                         onChange={(e) => setSelectedTemplate(e.target.value)}
@@ -60,21 +60,21 @@ export function CreateVMCard({ templates, nodes = [], onCreateVM }: CreateVMCard
                             </option>
                         ))}
                         {templates.length === 0 && (
-                            <option value="">No templates available</option>
+                            <option value="">Žádné šablony nejsou k dispozici</option>
                         )}
                     </select>
                 </div>
                 <div className="form-group">
-                    <label>Target Node:</label>
+                    <label>Cílový uzel:</label>
                     <select 
                         value={selectedNode}
                         onChange={(e) => setSelectedNode(e.target.value)}
                         disabled={isSubmitting}
                     >
-                        <option value="">Auto-Balance (Recommended)</option>
+                        <option value="">Automatické vyvážení zátěže (Doporučeno)</option>
                         {nodes.map(n => (
                             <option key={n.name} value={n.name}>
-                                {n.name} [{n.status}]
+                                {n.name} [{n.status.toUpperCase()}]
                             </option>
                         ))}
                     </select>
@@ -84,7 +84,7 @@ export function CreateVMCard({ templates, nodes = [], onCreateVM }: CreateVMCard
                     className="btn btn-primary"
                     disabled={isSubmitting || templates.length === 0 || !name.trim()}
                 >
-                    {isSubmitting ? 'Creating VM...' : 'Create VM'}
+                    {isSubmitting ? 'Vytváření VM...' : 'Vytvořit VM'}
                 </button>
             </form>
         </div>

@@ -33,7 +33,7 @@ async function resolveWebSocketUrl(vmId: string | number, tokenOverride: string 
 export function VMConsole({ vmId, vmName, token, onClose, onPopOut }: VMConsoleProps) {
     const [consoleMode, setConsoleMode] = useState<'vnc' | 'serial'>('vnc');
     const [status, setStatus] = useState<'connecting' | 'connected' | 'disconnected' | 'error'>('connecting');
-    const [statusMessage, setStatusMessage] = useState<string>('Initializing console...');
+    const [statusMessage, setStatusMessage] = useState<string>('Inicializace konzole...');
     const [connectAttempt, setConnectAttempt] = useState(0);
 
     const vncContainerRef = useRef<HTMLDivElement>(null);
@@ -48,13 +48,13 @@ export function VMConsole({ vmId, vmName, token, onClose, onPopOut }: VMConsoleP
         const connectVNC = async () => {
             if (!vmId) {
                 setStatus('error');
-                setStatusMessage('VM ID is missing');
+                setStatusMessage('Chybí ID virtuálního stroje');
                 return;
             }
 
             try {
                 setStatus('connecting');
-                setStatusMessage('Connecting to VM Display (VNC)...');
+                setStatusMessage('Připojování k obrazovce VM (VNC)...');
 
                 const vncUrl = await resolveWebSocketUrl(vmId, token, 'vnc');
                 if (isDisposed) return;
@@ -73,7 +73,7 @@ export function VMConsole({ vmId, vmName, token, onClose, onPopOut }: VMConsoleP
                 rfb.addEventListener('connect', () => {
                     if (isDisposed) return;
                     setStatus('connected');
-                    setStatusMessage(`Connected to ${vmName} Display`);
+                    setStatusMessage(`Připojeno k obrazovce ${vmName}`);
                     if (rfb.focus) rfb.focus();
                 });
 
@@ -81,13 +81,13 @@ export function VMConsole({ vmId, vmName, token, onClose, onPopOut }: VMConsoleP
                     if (isDisposed) return;
                     setStatus('disconnected');
                     const reason = e?.detail?.clean ? '' : (e?.detail?.reason ? ` (${e.detail.reason})` : '');
-                    setStatusMessage(`Display disconnected${reason}`);
+                    setStatusMessage(`Obrazovka odpojena${reason}`);
                 });
 
                 rfb.addEventListener('securityfailure', (e: any) => {
                     if (isDisposed) return;
                     setStatus('error');
-                    setStatusMessage(`Security handshake failed: ${e?.detail?.reason || 'authentication error'}`);
+                    setStatusMessage(`Autentizace selhala: ${e?.detail?.reason || 'chyba ověření'}`);
                 });
 
                 rfb.addEventListener('credentialsrequired', () => {
@@ -98,7 +98,7 @@ export function VMConsole({ vmId, vmName, token, onClose, onPopOut }: VMConsoleP
             } catch (err: any) {
                 if (isDisposed) return;
                 setStatus('error');
-                setStatusMessage(`Connection failed: ${err?.message || err}`);
+                setStatusMessage(`Připojení selhalo: ${err?.message || err}`);
             }
         };
 
@@ -142,19 +142,19 @@ export function VMConsole({ vmId, vmName, token, onClose, onPopOut }: VMConsoleP
         term.open(terminalRef.current);
         fitAddon.fit();
 
-        term.writeln(`\x1b[36mInitializing Serial Terminal for ${vmName} (VMID: ${vmId})...\x1b[0m\r\n`);
+        term.writeln(`\x1b[36mInicializace sériového terminálu pro ${vmName} (VMID: ${vmId})...\x1b[0m\r\n`);
 
         const connectSerial = async () => {
             if (!vmId) {
-                term.writeln(`\x1b[31mError: VM ID is missing\x1b[0m\r\n`);
+                term.writeln(`\x1b[31mChyba: Chybí ID virtuálního stroje\x1b[0m\r\n`);
                 setStatus('error');
-                setStatusMessage('VM ID is missing');
+                setStatusMessage('Chybí ID virtuálního stroje');
                 return;
             }
 
             try {
                 setStatus('connecting');
-                setStatusMessage('Connecting to serial console...');
+                setStatusMessage('Připojování k sériové konzoli...');
                 const wsUrl = await resolveWebSocketUrl(vmId, token, 'ws');
                 ws = new WebSocket(wsUrl);
                 ws.binaryType = 'arraybuffer';
@@ -162,8 +162,8 @@ export function VMConsole({ vmId, vmName, token, onClose, onPopOut }: VMConsoleP
                 ws.onopen = () => {
                     if (isDisposed) return;
                     setStatus('connected');
-                    setStatusMessage(`Connected to serial terminal`);
-                    term.writeln(`\x1b[32mConnected to serial terminal for ${vmName}\x1b[0m\r\n`);
+                    setStatusMessage('Připojeno k sériovému terminálu');
+                    term.writeln(`\x1b[32mPřipojeno k sériovému terminálu pro ${vmName}\x1b[0m\r\n`);
                 };
 
                 ws.onmessage = (event) => {
@@ -178,16 +178,16 @@ export function VMConsole({ vmId, vmName, token, onClose, onPopOut }: VMConsoleP
                 ws.onerror = () => {
                     if (isDisposed) return;
                     setStatus('error');
-                    setStatusMessage('Serial connection error');
-                    term.writeln(`\r\n\x1b[31m[WebSocket connection error]\x1b[0m\r\n`);
+                    setStatusMessage('Chyba sériového spojení');
+                    term.writeln(`\r\n\x1b[31m[Chyba WebSocket spojení]\x1b[0m\r\n`);
                 };
 
                 ws.onclose = (event) => {
                     if (isDisposed) return;
                     setStatus('disconnected');
                     const reason = event.reason ? `: ${event.reason}` : '';
-                    setStatusMessage(`Serial disconnected${reason}`);
-                    term.writeln(`\r\n\x1b[33m[Console disconnected${reason}]\x1b[0m\r\n`);
+                    setStatusMessage(`Sériová linka odpojena${reason}`);
+                    term.writeln(`\r\n\x1b[33m[Konzole odpojena${reason}]\x1b[0m\r\n`);
                 };
 
                 term.onData((data) => {
@@ -198,8 +198,8 @@ export function VMConsole({ vmId, vmName, token, onClose, onPopOut }: VMConsoleP
             } catch (err: any) {
                 if (isDisposed) return;
                 setStatus('error');
-                setStatusMessage(`Connection error: ${err?.message || err}`);
-                term.writeln(`\r\n\x1b[31m[Connection error: ${err}]\x1b[0m\r\n`);
+                setStatusMessage(`Chyba připojení: ${err?.message || err}`);
+                term.writeln(`\r\n\x1b[31m[Chyba připojení: ${err}]\x1b[0m\r\n`);
             }
         };
 
@@ -248,7 +248,7 @@ export function VMConsole({ vmId, vmName, token, onClose, onPopOut }: VMConsoleP
             }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                     <div style={{ fontWeight: 600, fontSize: '14px', letterSpacing: '0.02em' }}>
-                        {vmName} <span style={{ opacity: 0.6, fontSize: '12px' }}>({vmId ? `VMID: ${vmId}` : 'Console'})</span>
+                        {vmName} <span style={{ opacity: 0.6, fontSize: '12px' }}>({vmId ? `VMID: ${vmId}` : 'Konzole'})</span>
                     </div>
 
                     <div style={{
@@ -272,9 +272,9 @@ export function VMConsole({ vmId, vmName, token, onClose, onPopOut }: VMConsoleP
                                 color: consoleMode === 'vnc' ? '#ffffff' : '#94a3b8',
                                 transition: 'all 0.15s ease'
                             }}
-                            title="Graphical Screen (works for EVE-NG, Windows, and all VMs)"
+                            title="Grafická obrazovka (vhodné pro EVE-NG, Windows a další systémy)"
                         >
-                            Display (Screen)
+                            Obrazovka (VNC)
                         </button>
                         <button
                             type="button"
@@ -290,9 +290,9 @@ export function VMConsole({ vmId, vmName, token, onClose, onPopOut }: VMConsoleP
                                 color: consoleMode === 'serial' ? '#ffffff' : '#94a3b8',
                                 transition: 'all 0.15s ease'
                             }}
-                            title="Text Serial Terminal (for Linux serial gettys)"
+                            title="Textový sériový terminál (pro Linux getty)"
                         >
-                            Serial Terminal
+                            Sériový terminál
                         </button>
                     </div>
 
@@ -315,7 +315,9 @@ export function VMConsole({ vmId, vmName, token, onClose, onPopOut }: VMConsoleP
                                 status === 'connecting' ? '#eab308' :
                                 '#ef4444'
                         }} />
-                        <span style={{ textTransform: 'capitalize' }}>{status}</span>
+                        <span style={{ textTransform: 'capitalize' }}>
+                            {status === 'connected' ? 'Připojeno' : status === 'connecting' ? 'Připojování...' : status === 'disconnected' ? 'Odpojeno' : 'Chyba'}
+                        </span>
                     </div>
 
                     <span style={{ fontSize: '11px', color: '#94a3b8' }}>
@@ -336,9 +338,9 @@ export function VMConsole({ vmId, vmName, token, onClose, onPopOut }: VMConsoleP
                             borderRadius: '4px',
                             cursor: 'pointer'
                         }}
-                        title="Reconnect to VM"
+                        title="Znovu připojit ke konzoli"
                     >
-                        ↻ Reconnect
+                        Znovu připojit
                     </button>
 
                     {onPopOut && (
@@ -355,9 +357,9 @@ export function VMConsole({ vmId, vmName, token, onClose, onPopOut }: VMConsoleP
                                 cursor: 'pointer',
                                 fontWeight: 500
                             }}
-                            title="Open in standalone window"
+                            title="Otevřít v samostatném okně"
                         >
-                            ↗ Pop Out
+                            Samostatné okno
                         </button>
                     )}
 
@@ -374,7 +376,7 @@ export function VMConsole({ vmId, vmName, token, onClose, onPopOut }: VMConsoleP
                             cursor: 'pointer',
                             fontWeight: 'bold'
                         }}
-                        title="Close console"
+                        title="Zavřít konzoli"
                     >
                         X
                     </button>

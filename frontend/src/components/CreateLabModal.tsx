@@ -12,25 +12,25 @@ interface CreateLabModalProps {
 
 export function CreateLabModal({ isOpen, onClose, templates, token, onLabCreated }: CreateLabModalProps) {
     const [name, setName] = useState('');
-    const [category, setCategory] = useState('Cybersecurity & Architecture');
-    const [difficulty, setDifficulty] = useState('Intermediate');
+    const [category, setCategory] = useState('Kybernetická bezpečnost a architektura');
+    const [difficulty, setDifficulty] = useState('Středně pokročilý');
     const [description, setDescription] = useState('');
-    const [objectives, setObjectives] = useState<string[]>(['Configure network interfaces', 'Verify packet routing']);
+    const [objectives, setObjectives] = useState<string[]>(['Nakonfigurujte síťová rozhraní', 'Ověřte směrování paketů']);
     const [newObjective, setNewObjective] = useState('');
 
     const [vms, setVms] = useState<LabVMTemplate[]>([
         {
-            name: 'Router-Gateway',
+            name: 'Router-Brána',
             template_id: templates.length > 0 ? Number(templates[0].id) : 101,
-            description: 'Core gateway and firewall router',
+            description: 'Centrální firewall a směrovač',
             ram_mb: 2048,
             default_user: 'root',
             default_password: 'password'
         },
         {
-            name: 'Target-Server',
+            name: 'Cilovy-Server',
             template_id: templates.length > 0 ? Number(templates[0].id) : 101,
-            description: 'Protected host on internal subnet',
+            description: 'Chráněný server ve vnitřní síti',
             ram_mb: 2048,
             default_user: 'student',
             default_password: 'password'
@@ -39,11 +39,11 @@ export function CreateLabModal({ isOpen, onClose, templates, token, onLabCreated
 
     const [networks, setNetworks] = useState<LabNetworkLink[]>([
         {
-            from_vm: 'Router-Gateway',
+            from_vm: 'Router-Brána',
             from_nic: 'net0',
-            to_vm: 'Target-Server',
+            to_vm: 'Cilovy-Server',
             to_nic: 'net0',
-            label: 'Internal Subnet (10.0.1.0/24)'
+            label: 'Vnitřní podsíť (10.0.1.0/24)'
         }
     ]);
 
@@ -67,9 +67,9 @@ export function CreateLabModal({ isOpen, onClose, templates, token, onLabCreated
         setVms(prev => [
             ...prev,
             {
-                name: `Node-${nextId}`,
+                name: `Uzel-${nextId}`,
                 template_id: templates.length > 0 ? Number(templates[0].id) : 101,
-                description: 'Lab virtual machine',
+                description: 'Laboratorní virtuální stroj',
                 ram_mb: 2048,
                 default_user: 'student',
                 default_password: 'password'
@@ -102,7 +102,7 @@ export function CreateLabModal({ isOpen, onClose, templates, token, onLabCreated
                 from_nic: 'net0',
                 to_vm: vms[1].name,
                 to_nic: 'net0',
-                label: `Point-to-Point Link ${prev.length + 1}`
+                label: `Bod-Bod propojení ${prev.length + 1}`
             }
         ]);
     };
@@ -123,11 +123,11 @@ export function CreateLabModal({ isOpen, onClose, templates, token, onLabCreated
         e.preventDefault();
         setErrorMsg('');
         if (!name.trim()) {
-            setErrorMsg('Lab scenario name is required');
+            setErrorMsg('Název laboratorního scénáře je povinný');
             return;
         }
         if (vms.length === 0) {
-            setErrorMsg('At least one virtual machine is required in the lab');
+            setErrorMsg('V laboratoři musí být alespoň jeden virtuální stroj');
             return;
         }
 
@@ -166,14 +166,14 @@ export function CreateLabModal({ isOpen, onClose, templates, token, onLabCreated
 
             if (!resp.ok) {
                 const errData = await resp.json().catch(() => ({}));
-                throw new Error(errData.error || `Server responded with ${resp.status}`);
+                throw new Error(errData.error || `Server odpověděl kódem ${resp.status}`);
             }
 
             const createdLab = await resp.json();
             onLabCreated(createdLab);
             onClose();
         } catch (err: any) {
-            setErrorMsg(err.message || 'Failed to create lab template');
+            setErrorMsg(err.message || 'Nepodařilo se vytvořit laboratorní šablonu');
         } finally {
             setIsSubmitting(false);
         }
@@ -183,12 +183,12 @@ export function CreateLabModal({ isOpen, onClose, templates, token, onLabCreated
         <div className="modal-backdrop" onClick={onClose}>
             <div 
                 className="modal" 
-                style={{ maxWidth: '820px', width: '95%', maxHeight: '90vh', overflowY: 'auto' }}
+                style={{ maxWidth: '840px', width: '95%', maxHeight: '90vh', overflowY: 'auto' }}
                 onClick={e => e.stopPropagation()}
             >
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                    <h3 style={{ margin: 0 }}>Create Networking & Cybersecurity Lab Scenario</h3>
-                    <button className="btn btn-secondary btn-sm" onClick={onClose}>Close</button>
+                    <h3 style={{ margin: 0 }}>Vytvořit laboratorní scénář pro sítě a kyberbezpečnost</h3>
+                    <button className="btn btn-secondary btn-sm" onClick={onClose}>Zavřít</button>
                 </div>
 
                 {errorMsg && (
@@ -200,57 +200,57 @@ export function CreateLabModal({ isOpen, onClose, templates, token, onLabCreated
                 <form onSubmit={handleSubmit}>
                     <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: '12px', marginBottom: '12px' }}>
                         <div className="form-group" style={{ margin: 0 }}>
-                            <label>Lab Name</label>
+                            <label>Název laboratoře</label>
                             <input 
                                 type="text"
                                 value={name}
                                 onChange={e => setName(e.target.value)}
-                                placeholder="e.g. BGP Routing & Traffic Hijack"
+                                placeholder="např. BGP Směrování & Odchytávání provozu"
                                 required
                             />
                         </div>
                         <div className="form-group" style={{ margin: 0 }}>
-                            <label>Category</label>
+                            <label>Kategorie</label>
                             <select value={category} onChange={e => setCategory(e.target.value)}>
-                                <option value="Cybersecurity & Architecture">Cybersecurity & Architecture</option>
-                                <option value="Networking">Networking</option>
-                                <option value="Offensive Security">Offensive Security</option>
-                                <option value="Systems Administration">Systems Administration</option>
+                                <option value="Kybernetická bezpečnost a architektura">Kybernetická bezpečnost a architektura</option>
+                                <option value="Počítačové sítě">Počítačové sítě</option>
+                                <option value="Ofenzivní bezpečnost">Ofenzivní bezpečnost</option>
+                                <option value="Správa systémů">Správa systémů</option>
                             </select>
                         </div>
                         <div className="form-group" style={{ margin: 0 }}>
-                            <label>Difficulty</label>
+                            <label>Obtížnost</label>
                             <select value={difficulty} onChange={e => setDifficulty(e.target.value)}>
-                                <option value="Beginner">Beginner</option>
-                                <option value="Intermediate">Intermediate</option>
-                                <option value="Advanced">Advanced</option>
+                                <option value="Začátečník">Začátečník</option>
+                                <option value="Středně pokročilý">Středně pokročilý</option>
+                                <option value="Pokročilý">Pokročilý</option>
                             </select>
                         </div>
                     </div>
 
                     <div className="form-group" style={{ marginBottom: '12px' }}>
-                        <label>Description & Scenario Brief</label>
+                        <label>Popis scénáře a zadání pro studenty</label>
                         <textarea 
                             rows={3}
                             value={description}
                             onChange={e => setDescription(e.target.value)}
-                            placeholder="Describe the architectural challenge, threat model, or networking exercise..."
-                            style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid var(--border-color)', boxSizing: 'border-box' }}
+                            placeholder="Popište architekturu cvičení, model hrozeb nebo praktický síťový úkol..."
+                            style={{ width: '100%', padding: '9px 12px', borderRadius: '6px', border: '1px solid var(--input-border)', boxSizing: 'border-box', backgroundColor: 'var(--input-bg)', color: 'var(--text-main)' }}
                         />
                     </div>
 
-                    <div style={{ marginBottom: '16px', padding: '12px', backgroundColor: '#f9fafb', borderRadius: '6px', border: '1px solid var(--border-color)' }}>
-                        <label style={{ fontWeight: 600, display: 'block', marginBottom: '8px' }}>Learning Objectives</label>
+                    <div style={{ marginBottom: '16px', padding: '14px', backgroundColor: 'var(--card-bg-subtle)', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+                        <label style={{ fontWeight: 600, display: 'block', marginBottom: '8px' }}>Cíle cvičení</label>
                         <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
                             <input 
                                 type="text"
                                 value={newObjective}
                                 onChange={e => setNewObjective(e.target.value)}
-                                placeholder="Add specific task or milestone..."
+                                placeholder="Přidat konkrétní úkol nebo milník..."
                                 style={{ flex: 1 }}
                             />
                             <button type="button" className="btn btn-secondary btn-sm" onClick={handleAddObjective}>
-                                Add Objective
+                                Přidat cíl
                             </button>
                         </div>
                         <ul style={{ margin: 0, paddingLeft: '20px', fontSize: '13px' }}>
@@ -260,20 +260,20 @@ export function CreateLabModal({ isOpen, onClose, templates, token, onLabCreated
                                     <button 
                                         type="button" 
                                         onClick={() => handleRemoveObjective(i)}
-                                        style={{ marginLeft: '8px', border: 'none', background: 'none', color: '#ef4444', cursor: 'pointer', fontWeight: 'bold' }}
+                                        style={{ marginLeft: '8px', border: 'none', background: 'none', color: 'var(--danger-color)', cursor: 'pointer', fontWeight: 'bold' }}
                                     >
-                                        [remove]
+                                        [odstranit]
                                     </button>
                                 </li>
                             ))}
                         </ul>
                     </div>
 
-                    <div style={{ marginBottom: '16px', padding: '12px', backgroundColor: '#f9fafb', borderRadius: '6px', border: '1px solid var(--border-color)' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                            <strong style={{ fontSize: '14px' }}>Virtual Machines in Topology ({vms.length})</strong>
+                    <div style={{ marginBottom: '16px', padding: '14px', backgroundColor: 'var(--card-bg-subtle)', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                            <strong style={{ fontSize: '14px' }}>Virtuální stroje v topologii ({vms.length})</strong>
                             <button type="button" className="btn btn-primary btn-sm" onClick={handleAddVM}>
-                                + Add Machine
+                                + Přidat stroj
                             </button>
                         </div>
 
@@ -281,16 +281,16 @@ export function CreateLabModal({ isOpen, onClose, templates, token, onLabCreated
                             <div 
                                 key={idx} 
                                 style={{ 
-                                    padding: '10px', 
-                                    borderRadius: '6px', 
-                                    border: '1px solid #e5e7eb', 
-                                    backgroundColor: '#ffffff',
+                                    padding: '12px', 
+                                    borderRadius: '8px', 
+                                    border: '1px solid var(--border-color)', 
+                                    backgroundColor: 'var(--card-bg)',
                                     marginBottom: '8px' 
                                 }}
                             >
                                 <div style={{ display: 'grid', gridTemplateColumns: '2fr 2fr 1fr 1fr auto', gap: '8px', alignItems: 'center' }}>
                                     <div>
-                                        <label style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Role Name</label>
+                                        <label style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Role stroje</label>
                                         <input 
                                             type="text"
                                             value={vm.name}
@@ -299,7 +299,7 @@ export function CreateLabModal({ isOpen, onClose, templates, token, onLabCreated
                                         />
                                     </div>
                                     <div>
-                                        <label style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Base Template</label>
+                                        <label style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Výchozí šablona</label>
                                         <select 
                                             value={vm.template_id}
                                             onChange={e => handleUpdateVM(idx, 'template_id', Number(e.target.value))}
@@ -325,7 +325,7 @@ export function CreateLabModal({ isOpen, onClose, templates, token, onLabCreated
                                         />
                                     </div>
                                     <div>
-                                        <label style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Default User</label>
+                                        <label style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Výchozí uživatel</label>
                                         <input 
                                             type="text"
                                             value={vm.default_user || ''}
@@ -340,7 +340,7 @@ export function CreateLabModal({ isOpen, onClose, templates, token, onLabCreated
                                             onClick={() => handleRemoveVM(idx)}
                                             disabled={vms.length <= 1}
                                         >
-                                            Remove
+                                            Odebrat
                                         </button>
                                     </div>
                                 </div>
@@ -348,16 +348,16 @@ export function CreateLabModal({ isOpen, onClose, templates, token, onLabCreated
                         ))}
                     </div>
 
-                    <div style={{ marginBottom: '16px', padding: '12px', backgroundColor: '#f9fafb', borderRadius: '6px', border: '1px solid var(--border-color)' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                            <strong style={{ fontSize: '14px' }}>Network Links & Interconnects ({networks.length})</strong>
+                    <div style={{ marginBottom: '16px', padding: '14px', backgroundColor: 'var(--card-bg-subtle)', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                            <strong style={{ fontSize: '14px' }}>Síťová propojení a segmenty ({networks.length})</strong>
                             <button 
                                 type="button" 
                                 className="btn btn-secondary btn-sm" 
                                 onClick={handleAddNetwork}
                                 disabled={vms.length < 2}
                             >
-                                + Add Link
+                                + Přidat propojení
                             </button>
                         </div>
 
@@ -365,11 +365,11 @@ export function CreateLabModal({ isOpen, onClose, templates, token, onLabCreated
                             <div 
                                 key={idx} 
                                 style={{ 
-                                    padding: '8px', 
-                                    borderRadius: '6px', 
-                                    border: '1px solid #e5e7eb', 
-                                    backgroundColor: '#ffffff',
-                                    marginBottom: '6px',
+                                    padding: '10px', 
+                                    borderRadius: '8px', 
+                                    border: '1px solid var(--border-color)', 
+                                    backgroundColor: 'var(--card-bg)',
+                                    marginBottom: '8px',
                                     display: 'grid',
                                     gridTemplateColumns: '2fr 1fr 2fr 1fr 2fr auto',
                                     gap: '8px',
@@ -377,7 +377,7 @@ export function CreateLabModal({ isOpen, onClose, templates, token, onLabCreated
                                 }}
                             >
                                 <div>
-                                    <label style={{ fontSize: '10px', color: 'var(--text-muted)' }}>From VM</label>
+                                    <label style={{ fontSize: '10px', color: 'var(--text-muted)' }}>Ze stroje</label>
                                     <select 
                                         value={net.from_vm}
                                         onChange={e => handleUpdateNetwork(idx, 'from_vm', e.target.value)}
@@ -388,7 +388,7 @@ export function CreateLabModal({ isOpen, onClose, templates, token, onLabCreated
                                     </select>
                                 </div>
                                 <div>
-                                    <label style={{ fontSize: '10px', color: 'var(--text-muted)' }}>NIC</label>
+                                    <label style={{ fontSize: '10px', color: 'var(--text-muted)' }}>Karta</label>
                                     <input 
                                         type="text"
                                         value={net.from_nic || 'net0'}
@@ -396,7 +396,7 @@ export function CreateLabModal({ isOpen, onClose, templates, token, onLabCreated
                                     />
                                 </div>
                                 <div>
-                                    <label style={{ fontSize: '10px', color: 'var(--text-muted)' }}>To VM</label>
+                                    <label style={{ fontSize: '10px', color: 'var(--text-muted)' }}>Do stroje</label>
                                     <select 
                                         value={net.to_vm}
                                         onChange={e => handleUpdateNetwork(idx, 'to_vm', e.target.value)}
@@ -407,7 +407,7 @@ export function CreateLabModal({ isOpen, onClose, templates, token, onLabCreated
                                     </select>
                                 </div>
                                 <div>
-                                    <label style={{ fontSize: '10px', color: 'var(--text-muted)' }}>NIC</label>
+                                    <label style={{ fontSize: '10px', color: 'var(--text-muted)' }}>Karta</label>
                                     <input 
                                         type="text"
                                         value={net.to_nic || 'net0'}
@@ -415,12 +415,12 @@ export function CreateLabModal({ isOpen, onClose, templates, token, onLabCreated
                                     />
                                 </div>
                                 <div>
-                                    <label style={{ fontSize: '10px', color: 'var(--text-muted)' }}>Segment Label</label>
+                                    <label style={{ fontSize: '10px', color: 'var(--text-muted)' }}>Název segmentu</label>
                                     <input 
                                         type="text"
                                         value={net.label || ''}
                                         onChange={e => handleUpdateNetwork(idx, 'label', e.target.value)}
-                                        placeholder="e.g. DMZ or LAN"
+                                        placeholder="např. DMZ nebo LAN"
                                     />
                                 </div>
                                 <div style={{ paddingTop: '16px' }}>
@@ -438,10 +438,10 @@ export function CreateLabModal({ isOpen, onClose, templates, token, onLabCreated
 
                     <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
                         <button type="button" className="btn btn-secondary" onClick={onClose} disabled={isSubmitting}>
-                            Cancel
+                            Zrušit
                         </button>
                         <button type="submit" className="btn btn-primary" disabled={isSubmitting}>
-                            {isSubmitting ? 'Saving Lab Blueprint...' : 'Save & Publish Lab Scenario'}
+                            {isSubmitting ? 'Ukládání scénáře...' : 'Uložit a publikovat scénář'}
                         </button>
                     </div>
                 </form>

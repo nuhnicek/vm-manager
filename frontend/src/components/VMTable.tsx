@@ -27,115 +27,132 @@ export function VMTable({
 
     return (
         <div className="card">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                <h3 style={{ margin: 0 }}>Existing VMs ({vms.length})</h3>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '8px' }}>
+                <div>
+                    <h3 style={{ margin: 0 }}>Existující virtuální stroje ({vms.length})</h3>
+                    <p style={{ margin: '3px 0 0 0', fontSize: '13px', color: 'var(--text-muted)' }}>
+                        Seznam vašich instancí běžících na infrastruktuře
+                    </p>
+                </div>
                 <button 
                     className="btn btn-secondary btn-sm" 
                     onClick={onRefresh} 
-                    title="Reload VMs from Proxmox"
+                    title="Znovu načíst VM z Proxmoxu"
                     disabled={isRefreshing}
                 >
-                    {isRefreshing ? 'Refreshing...' : 'Refresh'}
+                    {isRefreshing ? 'Obnovování...' : 'Obnovit'}
                 </button>
             </div>
-            <table className="vm-table">
-                <thead>
-                    <tr>
-                        <th>VMID</th>
-                        <th>Name</th>
-                        <th>Node</th>
-                        {isTeacher && <th>Owner</th>}
-                        <th>Status</th>
-                        <th>Network Links</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                {vms.map((vm) => (
-                    <tr key={vm.id}>
-                        <td style={{ fontFamily: 'monospace', fontWeight: 600 }}>{vm.id}</td>
-                        <td className="fw-500">{vm.name}</td>
-                        <td>
-                            <span style={{ fontFamily: 'monospace', fontSize: '12px', padding: '2px 6px', background: '#e5e7eb', borderRadius: '4px' }}>
-                                {(vm as any).node || 'pve'}
-                            </span>
-                        </td>
-                        {isTeacher && (
-                            <td style={{ fontSize: '12px', fontFamily: 'monospace', color: 'var(--text-muted)' }}>
-                                {(vm as any).owner ? (vm as any).owner.slice(0, 8) + '...' : 'System'}
-                            </td>
+            <div style={{ overflowX: 'auto' }}>
+                <table className="vm-table">
+                    <thead>
+                        <tr>
+                            <th>VMID</th>
+                            <th>Název</th>
+                            <th>Uzel</th>
+                            {isTeacher && <th>Vlastník</th>}
+                            <th>Stav</th>
+                            <th>Síťová propojení</th>
+                            <th>Akce</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {vms.map((vm) => {
+                            const isRunning = vm.status === 'Running' || vm.status === 'running';
+
+                            return (
+                                <tr key={vm.id}>
+                                    <td style={{ fontFamily: 'monospace', fontWeight: 700, color: 'var(--primary-color)' }}>{vm.id}</td>
+                                    <td className="fw-500">{vm.name}</td>
+                                    <td>
+                                        <span style={{ fontFamily: 'monospace', fontSize: '11px', padding: '3px 8px', background: 'var(--card-bg-subtle)', border: '1px solid var(--border-color)', borderRadius: '6px' }}>
+                                            {(vm as any).node || 'pve'}
+                                        </span>
+                                    </td>
+                                    {isTeacher && (
+                                        <td style={{ fontSize: '12px', fontFamily: 'monospace', color: 'var(--text-muted)' }}>
+                                            {(vm as any).owner ? (vm as any).owner.slice(0, 8) + '...' : 'Systém'}
+                                        </td>
+                                    )}
+                                    <td>
+                                        <span className={`status-badge ${isRunning ? 'status-running' : 'status-stopped'}`}>
+                                            <span style={{ 
+                                                width: '6px', 
+                                                height: '6px', 
+                                                borderRadius: '50%', 
+                                                backgroundColor: isRunning ? 'var(--success-color)' : 'var(--danger-color)',
+                                                marginRight: '6px',
+                                                display: 'inline-block' 
+                                            }}></span>
+                                            {isRunning ? 'BĚŽÍ' : 'ZASTAVENO'}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        {vm.connections && vm.connections.length > 0 ? (
+                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                                                {vm.connections.map((conn, idx) => (
+                                                    <span key={idx} style={{ fontSize: '11px', fontFamily: 'monospace', color: 'var(--text-muted)' }}>
+                                                        &rarr; VM {conn.target_vm_id} ({conn.local_nic} &harr; {conn.target_nic})
+                                                    </span>
+                                                ))}
+                                            </div>
+                                        ) : (
+                                            <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Bez propojení</span>
+                                        )}
+                                    </td>
+                                    <td>
+                                        <div className="action-buttons">
+                                            {!isRunning ? (
+                                                <button 
+                                                    className="btn btn-success btn-sm" 
+                                                    onClick={() => onStartVM(String(vm.id), vm.name)}
+                                                >
+                                                    Spustit
+                                                </button>
+                                            ) : (
+                                                <button 
+                                                    className="btn btn-warning btn-sm" 
+                                                    onClick={() => onStopVM(String(vm.id), vm.name)}
+                                                >
+                                                    Zastavit
+                                                </button>
+                                            )}
+                                            
+                                            <button 
+                                                className="btn btn-primary btn-sm" 
+                                                onClick={() => onOpenConsole(String(vm.id))}
+                                            >
+                                                Konzole
+                                            </button>
+
+                                            <button 
+                                                className="btn btn-secondary btn-sm" 
+                                                onClick={() => onManageNetworking(vm)}
+                                            >
+                                                Síť
+                                            </button>
+                                            
+                                            <button 
+                                                className="btn btn-danger btn-sm" 
+                                                onClick={() => onDeleteVM(String(vm.id), vm.name)}
+                                            >
+                                                Smazat
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            );
+                        })}
+                        {vms.length === 0 && (
+                            <tr>
+                                <td colSpan={isTeacher ? 7 : 6} className="text-center text-muted" style={{ padding: '32px' }}>
+                                    V clusteru nebyly nalezeny žádné virtuální stroje pro tento účet.
+                                </td>
+                            </tr>
                         )}
-                        <td>
-                            <span className={`status-badge ${vm.status === 'Running' ? 'status-running' : 'status-stopped'}`}>
-                                {vm.status || 'Stopped'}
-                            </span>
-                        </td>
-                        <td>
-                            {(vm.connections || []).length === 0 ? (
-                                <span className="text-muted">None</span>
-                            ) : (
-                                <ul style={{ listStyleType: 'none', padding: 0, margin: 0, fontSize: '12px', fontFamily: 'monospace' }}>
-                                    {(vm.connections || []).map(conn => {
-                                        const tVm = vms.find(v => String(v.id) === String(conn.target_vm_id));
-                                        return (
-                                            <li key={conn.target_vm_id} style={{ whiteSpace: 'nowrap' }}>
-                                                [{conn.local_nic}] &rarr; [{conn.target_nic}] {tVm ? tVm.name : conn.target_vm_id}
-                                            </li>
-                                        );
-                                    })}
-                                </ul>
-                            )}
-                        </td>
-                        <td>
-                            <div className="action-buttons">
-                                {vm.status === 'Running' ? (
-                                    <>
-                                        <button 
-                                            className="btn btn-sm btn-warning"
-                                            onClick={() => onStopVM(String(vm.id), vm.name)}
-                                        >
-                                            Stop
-                                        </button>
-                                        <button 
-                                            className="btn btn-sm btn-primary"
-                                            onClick={() => onOpenConsole(String(vm.id))}
-                                        >
-                                            Console
-                                        </button>
-                                    </>
-                                ) : (
-                                    <button 
-                                        className="btn btn-sm btn-success"
-                                        onClick={() => onStartVM(String(vm.id), vm.name)}
-                                    >
-                                        Start
-                                    </button>
-                                )}
-                                <button 
-                                    className="btn btn-sm btn-secondary ml-2"
-                                    onClick={() => onManageNetworking(vm)}
-                                >
-                                    Networking
-                                </button>
-                                <button 
-                                    className="btn btn-sm btn-danger ml-2"
-                                    onClick={() => onDeleteVM(String(vm.id), vm.name)}
-                                >
-                                    Delete
-                                </button>
-                            </div>
-                        </td>
-                    </tr>
-                ))}
-                {vms.length === 0 && (
-                    <tr>
-                        <td colSpan={isTeacher ? 7 : 6} className="text-center text-muted" style={{ padding: '24px' }}>
-                            No VMs found on Proxmox cluster.
-                        </td>
-                    </tr>
-                )}
-                </tbody>
-            </table>
+                    </tbody>
+                </table>
+            </div>
         </div>
     );
 }

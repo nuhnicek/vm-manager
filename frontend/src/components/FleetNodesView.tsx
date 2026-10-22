@@ -43,7 +43,7 @@ export function FleetNodesView({ nodes, token, onMessage, onRefreshNodes }: Flee
     }, [token]);
 
     const handleBulkStopAll = async () => {
-        if (!window.confirm('Are you sure you want to STOP ALL running virtual machines across all cluster nodes?')) {
+        if (!window.confirm('Opravdu chcete ZASTAVIT VŠECHNY běžící virtuální stroje napříč všemi uzly clusteru?')) {
             return;
         }
         setIsBulkActionRunning(true);
@@ -67,11 +67,11 @@ export function FleetNodesView({ nodes, token, onMessage, onRefreshNodes }: Flee
                 const err = await resp.json().catch(() => ({}));
                 throw new Error(err.error || `Server responded with ${resp.status}`);
             }
-            onMessage('Bulk action completed: All running fleet VMs stopped');
+            onMessage('Hromadná akce dokončena: Všechny běžící virtuální stroje byly zastaveny');
             await fetchFleetVMs();
             onRefreshNodes();
         } catch (err: any) {
-            onMessage(`Bulk action failed: ${err.message}`);
+            onMessage(`Hromadná akce selhala: ${err.message}`);
         } finally {
             setIsBulkActionRunning(false);
         }
@@ -83,11 +83,11 @@ export function FleetNodesView({ nodes, token, onMessage, onRefreshNodes }: Flee
 
     return (
         <div className="card">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '12px' }}>
                 <div>
-                    <h3 style={{ margin: 0 }}>Cluster Fleet & Multi-Node Infrastructure</h3>
+                    <h3 style={{ margin: 0 }}>Cluster a víceuzlová infrastruktura</h3>
                     <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: 'var(--text-muted)' }}>
-                        Overview of compute nodes and all virtual machines running in the cluster
+                        Přehled výpočetních uzlů a všech virtuálních strojů běžících v clusteru
                     </p>
                 </div>
                 <div style={{ display: 'flex', gap: '8px' }}>
@@ -96,14 +96,14 @@ export function FleetNodesView({ nodes, token, onMessage, onRefreshNodes }: Flee
                         onClick={handleBulkStopAll}
                         disabled={isBulkActionRunning || fleetVMs.length === 0}
                     >
-                        {isBulkActionRunning ? 'Stopping All...' : 'Stop All Fleet VMs'}
+                        {isBulkActionRunning ? 'Zastavování všech...' : 'Zastavit všechny stroje v clusteru'}
                     </button>
                     <button 
                         className="btn btn-secondary btn-sm"
                         onClick={() => { fetchFleetVMs(); onRefreshNodes(); }}
                         disabled={isLoading}
                     >
-                        {isLoading ? 'Refreshing...' : 'Refresh Fleet'}
+                        {isLoading ? 'Obnovování...' : 'Obnovit cluster'}
                     </button>
                 </div>
             </div>
@@ -115,22 +115,22 @@ export function FleetNodesView({ nodes, token, onMessage, onRefreshNodes }: Flee
                         onClick={() => setSelectedNodeFilter(prev => prev === node.name ? '' : node.name)}
                         style={{
                             padding: '12px',
-                            borderRadius: '6px',
+                            borderRadius: '8px',
                             border: selectedNodeFilter === node.name ? '2px solid var(--primary-color)' : '1px solid var(--border-color)',
-                            backgroundColor: selectedNodeFilter === node.name ? '#eff6ff' : '#f9fafb',
+                            backgroundColor: selectedNodeFilter === node.name ? 'var(--primary-subtle)' : 'var(--card-bg-subtle)',
                             cursor: 'pointer'
                         }}
                     >
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
                             <strong style={{ fontSize: '14px' }}>{node.name}</strong>
                             <span className={`status-badge ${node.status === 'online' ? 'status-running' : 'status-stopped'}`}>
-                                {node.status}
+                                {node.status === 'online' ? 'ONLINE' : 'OFFLINE'}
                             </span>
                         </div>
                         <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
-                            <div>Total VMs: <strong>{node.total_vms || 0}</strong></div>
-                            <div>Running: <strong>{node.running_vms || 0}</strong></div>
-                            <div>Templates: <strong>{node.templates || 0}</strong></div>
+                            <div>Celkem VM: <strong>{node.total_vms || 0}</strong></div>
+                            <div>Běží: <strong>{node.running_vms || 0}</strong></div>
+                            <div>Šablony: <strong>{node.templates || 0}</strong></div>
                         </div>
                     </div>
                 ))}
@@ -138,7 +138,7 @@ export function FleetNodesView({ nodes, token, onMessage, onRefreshNodes }: Flee
 
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
                 <h4 style={{ margin: 0 }}>
-                    Fleet VMs ({filteredVMs.length}) {selectedNodeFilter && `(Filtered to ${selectedNodeFilter})`}
+                    Virtuální stroje v clusteru ({filteredVMs.length}) {selectedNodeFilter && `(Filtrováno: ${selectedNodeFilter})`}
                 </h4>
                 {selectedNodeFilter && (
                     <button 
@@ -146,7 +146,7 @@ export function FleetNodesView({ nodes, token, onMessage, onRefreshNodes }: Flee
                         onClick={() => setSelectedNodeFilter('')}
                         style={{ fontSize: '11px', padding: '2px 8px' }}
                     >
-                        Clear Filter
+                        Zrušit filtr
                     </button>
                 )}
             </div>
@@ -155,10 +155,10 @@ export function FleetNodesView({ nodes, token, onMessage, onRefreshNodes }: Flee
                 <thead>
                     <tr>
                         <th>VMID</th>
-                        <th>Name</th>
-                        <th>Node</th>
-                        <th>Owner</th>
-                        <th>Status</th>
+                        <th>Název</th>
+                        <th>Uzel</th>
+                        <th>Vlastník</th>
+                        <th>Stav</th>
                         <th>RAM</th>
                     </tr>
                 </thead>
@@ -168,16 +168,16 @@ export function FleetNodesView({ nodes, token, onMessage, onRefreshNodes }: Flee
                             <td style={{ fontFamily: 'monospace', fontWeight: 600 }}>{vm.id}</td>
                             <td className="fw-500">{vm.name}</td>
                             <td>
-                                <span style={{ fontFamily: 'monospace', fontSize: '12px', padding: '2px 6px', background: '#e5e7eb', borderRadius: '4px' }}>
+                                <span style={{ fontFamily: 'monospace', fontSize: '12px', padding: '2px 6px', background: 'var(--badge-bg)', borderRadius: '4px' }}>
                                     {vm.node || 'pve'}
                                 </span>
                             </td>
                             <td style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
-                                {vm.owner_email || vm.owner || (vm.owner_uuid ? vm.owner_uuid.slice(0, 8) + '...' : 'System')}
+                                {vm.owner_email || vm.owner || (vm.owner_uuid ? vm.owner_uuid.slice(0, 8) + '...' : 'Systém')}
                             </td>
                             <td>
                                 <span className={`status-badge ${vm.status === 'Running' ? 'status-running' : 'status-stopped'}`}>
-                                    {vm.status || 'Stopped'}
+                                    {vm.status === 'Running' ? 'BĚŽÍ' : 'ZASTAVENO'}
                                 </span>
                             </td>
                             <td>{vm.ram_mb ? `${vm.ram_mb} MB` : '-'}</td>
@@ -186,7 +186,7 @@ export function FleetNodesView({ nodes, token, onMessage, onRefreshNodes }: Flee
                     {filteredVMs.length === 0 && (
                         <tr>
                             <td colSpan={6} className="text-center text-muted" style={{ padding: '24px' }}>
-                                No fleet virtual machines found.
+                                Nebyly nalezeny žádné virtuální stroje v clusteru.
                             </td>
                         </tr>
                     )}
@@ -195,3 +195,4 @@ export function FleetNodesView({ nodes, token, onMessage, onRefreshNodes }: Flee
         </div>
     );
 }
+

@@ -46,12 +46,12 @@ export function TemplatesManager({ templates, vms, nodes, token, onRefresh, onMe
                 const err = await resp.json().catch(() => ({}));
                 throw new Error(err.error || `Failed with status ${resp.status}`);
             }
-            onMessage(`VM ${convertVMID} successfully converted to template`);
+            onMessage(`Virtuální stroj ${convertVMID} byl úspěšně převeden na šablonu`);
             setActiveAction('none');
             setConvertVMID('');
             onRefresh();
         } catch (err: any) {
-            onMessage(`Error converting VM: ${err.message}`);
+            onMessage(`Chyba při převodu VM: ${err.message}`);
         } finally {
             setIsProcessing(false);
         }
@@ -87,14 +87,14 @@ export function TemplatesManager({ templates, vms, nodes, token, onRefresh, onMe
                 const err = await resp.json().catch(() => ({}));
                 throw new Error(err.error || `Failed with status ${resp.status}`);
             }
-            onMessage(`Template ${cloneName} successfully created from VM ${cloneSourceVMID}`);
+            onMessage(`Šablona ${cloneName} byla úspěšně vytvořena z VM ${cloneSourceVMID}`);
             setActiveAction('none');
             setCloneSourceVMID('');
             setCloneName('');
             setCloneDescription('');
             onRefresh();
         } catch (err: any) {
-            onMessage(`Error creating template: ${err.message}`);
+            onMessage(`Chyba při vytváření šablony: ${err.message}`);
         } finally {
             setIsProcessing(false);
         }
@@ -102,11 +102,11 @@ export function TemplatesManager({ templates, vms, nodes, token, onRefresh, onMe
 
     return (
         <div className="card">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '12px' }}>
                 <div>
-                    <h3 style={{ margin: 0 }}>Proxmox Cluster Templates ({templates.length})</h3>
+                    <h3 style={{ margin: 0 }}>Šablony Proxmox Clusteru ({templates.length})</h3>
                     <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: 'var(--text-muted)' }}>
-                        Base machine images available across cluster nodes for instantiating labs and instances
+                        Základní obrazy virtuálních strojů dostupné napříč uzly clusteru pro nasazování laboratoří a instancí
                     </p>
                 </div>
                 <div style={{ display: 'flex', gap: '8px' }}>
@@ -114,86 +114,86 @@ export function TemplatesManager({ templates, vms, nodes, token, onRefresh, onMe
                         className="btn btn-secondary btn-sm"
                         onClick={() => setActiveAction(prev => prev === 'convert' ? 'none' : 'convert')}
                     >
-                        Convert VM to Template
+                        Převést VM na šablonu
                     </button>
                     <button 
                         className="btn btn-primary btn-sm"
                         onClick={() => setActiveAction(prev => prev === 'clone' ? 'none' : 'clone')}
                     >
-                        + Clone as New Template
+                        + Klonovat jako šablonu
                     </button>
                     <button className="btn btn-secondary btn-sm" onClick={onRefresh}>
-                        Refresh
+                        Obnovit
                     </button>
                 </div>
             </div>
 
             {activeAction === 'convert' && (
-                <div style={{ padding: '16px', backgroundColor: '#f9fafb', borderRadius: '6px', border: '1px solid var(--border-color)', marginBottom: '16px' }}>
-                    <h4 style={{ margin: '0 0 8px 0' }}>Convert Existing VM to Template (In-Place)</h4>
-                    <form onSubmit={handleConvert} style={{ display: 'flex', gap: '12px', alignItems: 'flex-end' }}>
-                        <div className="form-group" style={{ margin: 0, flex: 1 }}>
-                            <label>Select VM to Convert</label>
+                <div style={{ padding: '16px', backgroundColor: 'var(--card-bg-subtle)', borderRadius: '8px', border: '1px solid var(--border-color)', marginBottom: '16px' }}>
+                    <h4 style={{ margin: '0 0 8px 0' }}>Převést existující virtuální stroj na šablonu (In-Place)</h4>
+                    <form onSubmit={handleConvert} style={{ display: 'flex', gap: '12px', alignItems: 'flex-end', flexWrap: 'wrap' }}>
+                        <div className="form-group" style={{ margin: 0, flex: 1, minWidth: '220px' }}>
+                            <label>Vyberte VM k převodu</label>
                             <select 
                                 value={convertVMID} 
                                 onChange={e => setConvertVMID(e.target.value)}
                                 required
                             >
-                                <option value="">Select a VM...</option>
+                                <option value="">Vyberte virtuální stroj...</option>
                                 {vms.map(v => (
                                     <option key={v.id} value={String(v.id)}>
-                                        {v.name} (VMID: {v.id}) - Node: {(v as any).node || 'pve1'} [{v.status || 'Stopped'}]
+                                        {v.name} (VMID: {v.id}) - Uzel: {(v as any).node || 'pve1'} [{v.status === 'Running' ? 'Běží' : 'Zastaveno'}]
                                     </option>
                                 ))}
                             </select>
                         </div>
                         <button type="submit" className="btn btn-primary" disabled={!convertVMID || isProcessing}>
-                            {isProcessing ? 'Converting...' : 'Convert to Template'}
+                            {isProcessing ? 'Převádění...' : 'Převést na šablonu'}
                         </button>
                         <button type="button" className="btn btn-secondary" onClick={() => setActiveAction('none')}>
-                            Cancel
+                            Zrušit
                         </button>
                     </form>
                 </div>
             )}
 
             {activeAction === 'clone' && (
-                <div style={{ padding: '16px', backgroundColor: '#f9fafb', borderRadius: '6px', border: '1px solid var(--border-color)', marginBottom: '16px' }}>
-                    <h4 style={{ margin: '0 0 8px 0' }}>Clone VM As New Proxmox Template (Multi-Node)</h4>
+                <div style={{ padding: '16px', backgroundColor: 'var(--card-bg-subtle)', borderRadius: '8px', border: '1px solid var(--border-color)', marginBottom: '16px' }}>
+                    <h4 style={{ margin: '0 0 8px 0' }}>Klonovat VM jako novou šablonu Proxmox (víceuzlové)</h4>
                     <form onSubmit={handleCloneAsTemplate}>
-                        <div style={{ display: 'grid', gridTemplateColumns: '2fr 2fr 1fr 1fr', gap: '12px', marginBottom: '12px' }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px', marginBottom: '12px' }}>
                             <div className="form-group" style={{ margin: 0 }}>
-                                <label>Source VM</label>
+                                <label>Zdrojový virtuální stroj</label>
                                 <select 
                                     value={cloneSourceVMID} 
                                     onChange={e => setCloneSourceVMID(e.target.value)}
                                     required
                                 >
-                                    <option value="">Select source VM...</option>
+                                    <option value="">Vyberte zdrojový virtuální stroj...</option>
                                     {vms.map(v => (
                                         <option key={v.id} value={String(v.id)}>
-                                            {v.name} (VMID: {v.id}) - Node: {(v as any).node || 'pve1'}
+                                            {v.name} (VMID: {v.id}) - Uzel: {(v as any).node || 'pve1'}
                                         </option>
                                     ))}
                                 </select>
                             </div>
                             <div className="form-group" style={{ margin: 0 }}>
-                                <label>New Template Name</label>
+                                <label>Název nové šablony</label>
                                 <input 
                                     type="text" 
                                     value={cloneName}
                                     onChange={e => setCloneName(e.target.value)}
-                                    placeholder="e.g. kali-pentest-clean"
+                                    placeholder="např. kali-pentest-clean"
                                     required
                                 />
                             </div>
                             <div className="form-group" style={{ margin: 0 }}>
-                                <label>Target Node</label>
+                                <label>Cílový uzel</label>
                                 <select 
-                                    value={cloneTargetNode}
+                                    value={cloneTargetNode} 
                                     onChange={e => setCloneTargetNode(e.target.value)}
                                 >
-                                    <option value="">Auto-Balance</option>
+                                    <option value="">Automatické vyvážení</option>
                                     {nodes.map(n => (
                                         <option key={n.name} value={n.name}>{n.name}</option>
                                     ))}
@@ -202,7 +202,7 @@ export function TemplatesManager({ templates, vms, nodes, token, onRefresh, onMe
                             <div className="form-group" style={{ margin: 0 }}>
                                 <label>RAM (MB)</label>
                                 <input 
-                                    type="number"
+                                    type="number" 
                                     value={cloneRAM}
                                     onChange={e => setCloneRAM(Number(e.target.value))}
                                     step={512}
@@ -211,20 +211,20 @@ export function TemplatesManager({ templates, vms, nodes, token, onRefresh, onMe
                             </div>
                         </div>
                         <div className="form-group" style={{ marginBottom: '12px' }}>
-                            <label>Description & Lab Notes</label>
+                            <label>Popis a laboratorní poznámky</label>
                             <input 
-                                type="text"
+                                type="text" 
                                 value={cloneDescription}
                                 onChange={e => setCloneDescription(e.target.value)}
-                                placeholder="Base OS tools, installed packages, or lab role..."
+                                placeholder="Nástroje operačního systému, balíčky nebo role..."
                             />
                         </div>
                         <div style={{ display: 'flex', gap: '8px' }}>
                             <button type="submit" className="btn btn-primary" disabled={!cloneSourceVMID || !cloneName.trim() || isProcessing}>
-                                {isProcessing ? 'Cloning & Converting...' : 'Create Cloned Template'}
+                                {isProcessing ? 'Klonování a vytváření...' : 'Vytvořit klonovanou šablonu'}
                             </button>
                             <button type="button" className="btn btn-secondary" onClick={() => setActiveAction('none')}>
-                                Cancel
+                                Zrušit
                             </button>
                         </div>
                     </form>
@@ -237,31 +237,32 @@ export function TemplatesManager({ templates, vms, nodes, token, onRefresh, onMe
                         key={tpl.id}
                         style={{
                             padding: '14px',
-                            borderRadius: '6px',
+                            borderRadius: '8px',
                             border: '1px solid var(--border-color)',
-                            backgroundColor: '#f9fafb'
+                            backgroundColor: 'var(--card-bg-subtle)'
                         }}
                     >
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
                             <strong style={{ fontSize: '15px' }}>{tpl.name}</strong>
-                            <span style={{ fontFamily: 'monospace', fontSize: '12px', padding: '2px 6px', background: '#e5e7eb', borderRadius: '4px' }}>
+                            <span style={{ fontFamily: 'monospace', fontSize: '12px', padding: '2px 6px', background: 'var(--badge-bg)', borderRadius: '4px' }}>
                                 VMID: {tpl.id}
                             </span>
                         </div>
                         <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
                             <div>UUID: {tpl.uuid || `tpl-${tpl.id}`}</div>
                             <div style={{ marginTop: '4px' }}>
-                                Status: <span className="status-badge status-running" style={{ fontSize: '10px' }}>Template Ready</span>
+                                Stav: <span className="status-badge status-running" style={{ fontSize: '10px' }}>Šablona připravena</span>
                             </div>
                         </div>
                     </div>
                 ))}
                 {templates.length === 0 && (
                     <div style={{ gridColumn: '1 / -1', textAlign: 'center', color: 'var(--text-muted)', padding: '24px' }}>
-                        No templates discovered on Proxmox nodes. Convert or clone an existing VM into a template above.
+                        Na uzlech Proxmox nebyly nalezeny žádné šablony. Převeďte nebo naklonujte existující VM na šablonu výše.
                     </div>
                 )}
             </div>
         </div>
     );
 }
+

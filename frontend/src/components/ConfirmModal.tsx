@@ -11,23 +11,24 @@ export function ConfirmModal({ isOpen, message, onConfirm, onCancel }: ConfirmMo
     return (
         <div className="modal-overlay">
             <div className="modal-content">
-                <h4>Confirmation</h4>
+                <h4>Potvrzení akce</h4>
                 <p>{message}</p>
                 <div className="modal-actions">
                     <button 
                         className="btn btn-secondary" 
                         onClick={onCancel}
                     >
-                        Cancel
+                        Zrušit
                     </button>
                     <button 
                         className="btn btn-danger" 
                         onClick={onConfirm}
                     >
-                        Confirm
+                        Potvrdit
                     </button>
                 </div>
             </div>
         </div>
     );
 }
+

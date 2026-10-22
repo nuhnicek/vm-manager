@@ -72,14 +72,14 @@ export function StudentsManager({ token, onMessage }: StudentsManagerProps) {
                 const err = await resp.json().catch(() => ({}));
                 throw new Error(err.error || `Server responded with ${resp.status}`);
             }
-            onMessage(`Student account ${newEmail} successfully registered`);
+            onMessage(`Studentský účet ${newEmail} byl úspěšně zaregistrován`);
             setNewEmail('');
             setNewUsername('');
             setNewPassword('');
             setShowEnrollForm(false);
             await fetchStudents();
         } catch (err: any) {
-            onMessage(`Failed to enroll student: ${err.message}`);
+            onMessage(`Nepodařilo se zaregistrovat studenta: ${err.message}`);
         } finally {
             setIsSubmitting(false);
         }
@@ -87,11 +87,11 @@ export function StudentsManager({ token, onMessage }: StudentsManagerProps) {
 
     return (
         <div className="card">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '12px' }}>
                 <div>
-                    <h3 style={{ margin: 0 }}>Classroom & Student Accounts ({students.length})</h3>
+                    <h3 style={{ margin: 0 }}>Třída a studentské účty ({students.length})</h3>
                     <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: 'var(--text-muted)' }}>
-                        Manage student access, view resource allocation, and assign labs
+                        Správa přístupů studentů, přehled přidělených zdrojů a přiřazování laboratoří
                     </p>
                 </div>
                 <div style={{ display: 'flex', gap: '8px' }}>
@@ -99,35 +99,35 @@ export function StudentsManager({ token, onMessage }: StudentsManagerProps) {
                         className="btn btn-primary btn-sm"
                         onClick={() => setShowEnrollForm(prev => !prev)}
                     >
-                        {showEnrollForm ? 'Cancel' : '+ Enroll Student'}
+                        {showEnrollForm ? 'Zrušit' : '+ Zapsat studenta'}
                     </button>
                     <button 
                         className="btn btn-secondary btn-sm"
                         onClick={fetchStudents}
                         disabled={isLoading}
                     >
-                        {isLoading ? 'Refreshing...' : 'Refresh'}
+                        {isLoading ? 'Obnovování...' : 'Obnovit'}
                     </button>
                 </div>
             </div>
 
             {showEnrollForm && (
-                <div style={{ padding: '16px', backgroundColor: '#f9fafb', borderRadius: '6px', border: '1px solid var(--border-color)', marginBottom: '16px' }}>
-                    <h4 style={{ margin: '0 0 12px 0' }}>Enroll New Student</h4>
+                <div style={{ padding: '16px', backgroundColor: 'var(--card-bg-subtle)', borderRadius: '8px', border: '1px solid var(--border-color)', marginBottom: '16px' }}>
+                    <h4 style={{ margin: '0 0 12px 0' }}>Zapsat nového studenta</h4>
                     <form onSubmit={handleEnrollStudent}>
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr auto', gap: '12px', alignItems: 'flex-end' }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px', alignItems: 'flex-end' }}>
                             <div className="form-group" style={{ margin: 0 }}>
-                                <label>Email Address</label>
+                                <label>E-mailová adresa</label>
                                 <input 
                                     type="email"
                                     value={newEmail}
                                     onChange={e => setNewEmail(e.target.value)}
-                                    placeholder="student@school.cz"
+                                    placeholder="student@skola.cz"
                                     required
                                 />
                             </div>
                             <div className="form-group" style={{ margin: 0 }}>
-                                <label>Username (Optional)</label>
+                                <label>Uživatelské jméno (volitelné)</label>
                                 <input 
                                     type="text"
                                     value={newUsername}
@@ -136,17 +136,17 @@ export function StudentsManager({ token, onMessage }: StudentsManagerProps) {
                                 />
                             </div>
                             <div className="form-group" style={{ margin: 0 }}>
-                                <label>Initial Password</label>
+                                <label>Počáteční heslo</label>
                                 <input 
                                     type="password"
                                     value={newPassword}
                                     onChange={e => setNewPassword(e.target.value)}
-                                    placeholder="Temporary password"
+                                    placeholder="Dočasné heslo"
                                     required
                                 />
                             </div>
                             <button type="submit" className="btn btn-primary" disabled={isSubmitting}>
-                                {isSubmitting ? 'Enrolling...' : 'Create Account'}
+                                {isSubmitting ? 'Registrace...' : 'Vytvořit účet'}
                             </button>
                         </div>
                     </form>
@@ -156,12 +156,12 @@ export function StudentsManager({ token, onMessage }: StudentsManagerProps) {
             <table className="vm-table">
                 <thead>
                     <tr>
-                        <th>Email / Student</th>
+                        <th>E-mail / Student</th>
                         <th>UUID</th>
                         <th>Role</th>
-                        <th>Assigned VMs</th>
-                        <th>Running</th>
-                        <th>Active Labs</th>
+                        <th>Přiřazené VM</th>
+                        <th>Běží</th>
+                        <th>Aktivní laboratoře</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -173,18 +173,18 @@ export function StudentsManager({ token, onMessage }: StudentsManagerProps) {
                             </td>
                             <td>
                                 <span className={`status-badge ${st.role === 'teacher' ? 'status-running' : 'status-stopped'}`}>
-                                    {st.role || 'student'}
+                                    {st.role === 'teacher' ? 'Učitel' : 'Student'}
                                 </span>
                             </td>
-                            <td><strong>{st.vm_count || 0}</strong> VMs</td>
-                            <td>{st.running_vms || 0} running</td>
-                            <td>{st.lab_count || 0} labs</td>
+                            <td><strong>{st.vm_count || 0}</strong> VM</td>
+                            <td>{st.running_vms || 0} běží</td>
+                            <td>{st.lab_count || 0} laboratoří</td>
                         </tr>
                     ))}
                     {students.length === 0 && (
                         <tr>
                             <td colSpan={6} className="text-center text-muted" style={{ padding: '24px' }}>
-                                No student accounts detected.
+                                Nebyly nalezeny žádné studentské účty.
                             </td>
                         </tr>
                     )}
@@ -193,3 +193,4 @@ export function StudentsManager({ token, onMessage }: StudentsManagerProps) {
         </div>
     );
 }
+

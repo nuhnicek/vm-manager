@@ -21,6 +21,11 @@ import { TeacherView } from './components/TeacherView';
 import './App.css';
 
 function App() {
+    const [theme, setTheme] = useState<'light' | 'dark'>(() => {
+        const saved = localStorage.getItem('vm_manager_theme');
+        return saved === 'light' ? 'light' : 'dark';
+    });
+
     const [launchedConsoleVM, setLaunchedConsoleVM] = useState<string>('');
 
     const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -51,6 +56,15 @@ function App() {
         message: '',
         onConfirm: () => {}
     });
+
+    useEffect(() => {
+        document.documentElement.setAttribute('data-theme', theme);
+        localStorage.setItem('vm_manager_theme', theme);
+    }, [theme]);
+
+    const toggleTheme = () => {
+        setTheme(prev => prev === 'dark' ? 'light' : 'dark');
+    };
 
     useEffect(() => {
         const checkLaunchedConsole = async () => {
@@ -286,13 +300,13 @@ function App() {
                 });
                 if (!resp || !resp.ok) {
                     const errData = await resp?.json().catch(() => ({}));
-                    throw new Error(errData?.error || `Action failed with status ${resp ? resp.status : 'network error'}`);
+                    throw new Error(errData?.error || `Akce selhala se stavovým kódem ${resp ? resp.status : 'chyba sítě'}`);
                 }
-                setMessage(`Action completed successfully`);
+                setMessage(`Akce byla úspěšně dokončena`);
             }
             await fetchVMs();
         } catch (error: any) {
-            setMessage(`Error: ${error?.message || error}`);
+            setMessage(`Chyba: ${error?.message || error}`);
         }
     };
 
@@ -317,21 +331,21 @@ function App() {
     };
 
     const handleStopVM = (id: string, name: string) => {
-        handleActionWithConfirm(StopVM, id, `Are you sure you want to stop ${name}?`, '/vms/stop');
+        handleActionWithConfirm(StopVM, id, `Opravdu chcete zastavit virtuální stroj ${name}?`, '/vms/stop');
     };
 
     const handleDeleteVM = (id: string, name: string) => {
-        handleActionWithConfirm(DeleteVM, id, `Are you sure you want to DELETE ${name}? This action cannot be undone.`, '/vms/delete');
+        handleActionWithConfirm(DeleteVM, id, `Opravdu chcete SMAZAT virtuální stroj ${name}? Tuto akci nelze vrátit.`, '/vms/delete');
     };
 
     const handleOpenConsole = (id: string) => {
         const targetVM = vms.find(v => String(v.id) === id);
         if (!targetVM) {
-            setMessage(`Error: VM ${id} not found`);
+            setMessage(`Chyba: Virtuální stroj ${id} nebyl nalezen`);
             return;
         }
         if (targetVM.status !== 'Running') {
-            setMessage(`Error: ${targetVM.name} is stopped. Start the VM first to open the console.`);
+            setMessage(`Chyba: Virtuální stroj ${targetVM.name} je zastaven. Pro otevření konzole jej nejprve spusťte.`);
             return;
         }
         setActiveConsoleVM(targetVM);
@@ -344,13 +358,13 @@ function App() {
                 setActiveConsoleVM(null);
             }
         } catch (error) {
-            setMessage(`Error popping out console: ${error}`);
+            setMessage(`Chyba při otevírání samostatného okna konzole: ${error}`);
         }
     };
 
     const handleCreateVM = async (name: string, templateId: string, node?: string) => {
         if (!name.trim()) {
-            setMessage('Error: VM name cannot be empty');
+            setMessage('Chyba: Název virtuálního stroje nesmí být prázdný');
             return;
         }
         try {
@@ -390,14 +404,14 @@ function App() {
                 }
 
                 if (!resp || !resp.ok) {
-                    throw new Error(`Creation failed with status ${resp ? resp.status : 'network error'}`);
+                    throw new Error(`Vytvoření selhalo: ${resp ? resp.status : 'chyba sítě'}`);
                 }
             }
-            setMessage(`Successfully created VM: ${name}`);
+            setMessage(`Virtuální stroj ${name} byl úspěšně vytvořen`);
             await fetchVMs();
             await fetchNodes();
         } catch (error: any) {
-            setMessage(`Error: ${error?.message || error}`);
+            setMessage(`Chyba: ${error?.message || error}`);
         }
     };
 
@@ -421,12 +435,12 @@ function App() {
                         body: JSON.stringify({ vmid })
                     });
                 });
-                if (!resp || !resp.ok) throw new Error('Failed to add NIC');
-                setMessage(`Added Virtual NIC to ${managingConnectionsVM.name}`);
+                if (!resp || !resp.ok) throw new Error('Nepodařilo se přidat síťové rozhraní');
+                setMessage(`K virtuálnímu stroji ${managingConnectionsVM.name} bylo přidáno síťové rozhraní`);
             }
             await fetchVMs();
         } catch (error: any) {
-            setMessage(`Error: ${error?.message || error}`);
+            setMessage(`Chyba: ${error?.message || error}`);
         }
     };
 
@@ -450,12 +464,12 @@ function App() {
                         body: JSON.stringify({ vmid, nic })
                     });
                 });
-                if (!resp || !resp.ok) throw new Error('Failed to remove NIC');
-                setMessage(`Removed ${nic} from ${managingConnectionsVM.name}`);
+                if (!resp || !resp.ok) throw new Error('Nepodařilo se odebrat síťové rozhraní');
+                setMessage(`Ze stroje ${managingConnectionsVM.name} bylo odebráno rozhraní ${nic}`);
             }
             await fetchVMs();
         } catch (error: any) {
-            setMessage(`Error: ${error?.message || error}`);
+            setMessage(`Chyba: ${error?.message || error}`);
         }
     };
 
@@ -480,12 +494,12 @@ function App() {
                         body: JSON.stringify({ vmid1, vmid2, nic1: localNic, nic2: targetNic })
                     });
                 });
-                if (!resp || !resp.ok) throw new Error('Failed to connect VMs');
-                setMessage(`Connected ${managingConnectionsVM.name} to target VM`);
+                if (!resp || !resp.ok) throw new Error('Nepodařilo se propojit virtuální stroje');
+                setMessage(`Stroj ${managingConnectionsVM.name} byl úspěšně propojen s cílovým VM`);
             }
             await fetchVMs();
         } catch (error: any) {
-            setMessage(`Error: ${error?.message || error}`);
+            setMessage(`Chyba: ${error?.message || error}`);
         }
     };
 
@@ -510,12 +524,12 @@ function App() {
                         body: JSON.stringify({ vmid1, vmid2 })
                     });
                 });
-                if (!resp || !resp.ok) throw new Error('Failed to disconnect VMs');
-                setMessage(`Disconnected ${managingConnectionsVM.name} from target VM`);
+                if (!resp || !resp.ok) throw new Error('Nepodařilo se odpojit virtuální stroje');
+                setMessage(`Stroj ${managingConnectionsVM.name} byl odpojen od cílového VM`);
             }
             await fetchVMs();
         } catch (error: any) {
-            setMessage(`Error: ${error?.message || error}`);
+            setMessage(`Chyba: ${error?.message || error}`);
         }
     };
 
@@ -536,7 +550,7 @@ function App() {
         return (
             <div className="login-container">
                 <div className="card login-card" style={{ textAlign: 'center', padding: '36px 24px' }}>
-                    <p style={{ margin: 0, color: 'var(--text-muted)' }}>Verifying session...</p>
+                    <p style={{ margin: 0, color: 'var(--text-muted)' }}>Ověřování přihlášení...</p>
                 </div>
             </div>
         );
@@ -592,11 +606,13 @@ function App() {
                 onViewChange={setCurrentView}
                 showNetworkMap={showNetworkMap}
                 onToggleNetworkMap={() => setShowNetworkMap(prev => !prev)}
+                theme={theme}
+                onToggleTheme={toggleTheme}
                 onLogout={handleLogout}
             />
 
             {message && (
-                <div className={`message ${message.startsWith('Error') ? 'error' : 'success'}`}>
+                <div className={`message ${message.startsWith('Chyba') || message.startsWith('Error') ? 'error' : 'success'}`}>
                     {message}
                 </div>
             )}

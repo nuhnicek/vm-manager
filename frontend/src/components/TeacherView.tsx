@@ -116,7 +116,7 @@ export function TeacherView({
             }
 
             const instance = await resp.json();
-            onMessage(`Lab ${deployingLab.name} successfully deployed (Instance: ${instance.id || 'Active'})`);
+            onMessage(`Laboratoř ${deployingLab.name} byla úspěšně nasazena (Instance: ${instance.id || 'Aktivní'})`);
             setDeployingLab(null);
             setDeployStudentUUID('');
             setDeployLabPrefix('');
@@ -124,7 +124,7 @@ export function TeacherView({
             onRefreshVMs();
             onRefreshNodes();
         } catch (err: any) {
-            onMessage(`Lab deployment failed: ${err.message}`);
+            onMessage(`Nasazení laboratoře selhalo: ${err.message}`);
         } finally {
             setIsDeploying(false);
         }
@@ -145,12 +145,12 @@ export function TeacherView({
                 });
             }
             if (resp.ok) {
-                onMessage(`Lab instance ${id} started`);
+                onMessage(`Laboratorní instance ${id} byla spuštěna`);
                 await fetchLabs();
                 onRefreshVMs();
             }
         } catch (err: any) {
-            onMessage(`Failed to start lab instance: ${err.message}`);
+            onMessage(`Nepodařilo se spustit laboratorní instanci: ${err.message}`);
         }
     };
 
@@ -169,17 +169,17 @@ export function TeacherView({
                 });
             }
             if (resp.ok) {
-                onMessage(`Lab instance ${id} stopped`);
+                onMessage(`Laboratorní instance ${id} byla zastavena`);
                 await fetchLabs();
                 onRefreshVMs();
             }
         } catch (err: any) {
-            onMessage(`Failed to stop lab instance: ${err.message}`);
+            onMessage(`Nepodařilo se zastavit laboratorní instanci: ${err.message}`);
         }
     };
 
     const handleDeleteInstance = async (id: string) => {
-        if (!window.confirm(`Delete lab instance ${id} and all its connected VMs?`)) return;
+        if (!window.confirm(`Smazat laboratorní instanci ${id} a všechny její propojené virtuální stroje?`)) return;
         try {
             let resp: Response;
             try {
@@ -194,18 +194,18 @@ export function TeacherView({
                 });
             }
             if (resp.ok) {
-                onMessage(`Lab instance ${id} deleted`);
+                onMessage(`Laboratorní instance ${id} byla smazána`);
                 await fetchLabs();
                 onRefreshVMs();
                 onRefreshNodes();
             }
         } catch (err: any) {
-            onMessage(`Failed to delete lab instance: ${err.message}`);
+            onMessage(`Nepodařilo se smazat laboratorní instanci: ${err.message}`);
         }
     };
 
     const handleDeleteTemplate = async (id: string) => {
-        if (!window.confirm(`Delete lab blueprint ${id}?`)) return;
+        if (!window.confirm(`Smazat návrh laboratorního scénáře ${id}?`)) return;
         try {
             let resp: Response;
             try {
@@ -220,11 +220,11 @@ export function TeacherView({
                 });
             }
             if (resp.ok) {
-                onMessage(`Lab template ${id} removed`);
+                onMessage(`Šablona laboratoře ${id} byla odstraněna`);
                 await fetchLabs();
             }
         } catch (err: any) {
-            onMessage(`Failed to delete lab template: ${err.message}`);
+            onMessage(`Nepodařilo se smazat šablonu laboratoře: ${err.message}`);
         }
     };
 
@@ -237,25 +237,25 @@ export function TeacherView({
                 token={token}
                 onLabCreated={(newLab) => {
                     setLabTemplates(prev => [...prev, newLab]);
-                    onMessage(`Lab scenario ${newLab.name} created successfully`);
+                    onMessage(`Laboratorní scénář ${newLab.name} byl úspěšně vytvořen`);
                 }}
             />
 
             {deployingLab && (
                 <div className="modal-backdrop" onClick={() => setDeployingLab(null)}>
                     <div className="modal" style={{ maxWidth: '500px' }} onClick={e => e.stopPropagation()}>
-                        <h3>Deploy Lab: {deployingLab.name}</h3>
+                        <h3>Nasadit laboratoř: {deployingLab.name}</h3>
                         <p style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
                             {deployingLab.description}
                         </p>
                         <form onSubmit={handleDeploySubmit}>
                             <div className="form-group">
-                                <label>Target Student / Assignee</label>
+                                <label>Cílový student / Příjemce</label>
                                 <select 
                                     value={deployStudentUUID}
                                     onChange={e => setDeployStudentUUID(e.target.value)}
                                 >
-                                    <option value="">Myself (Teacher Environment)</option>
+                                    <option value="">Já sám (Učitelské prostředí)</option>
                                     {students.map(s => (
                                         <option key={s.uuid} value={s.uuid}>
                                             {s.email} ({s.uuid ? s.uuid.slice(0, 8) + '...' : ''})
@@ -264,23 +264,23 @@ export function TeacherView({
                                 </select>
                             </div>
                             <div className="form-group">
-                                <label>Instance Prefix (Optional)</label>
+                                <label>Prefix instance (volitelné)</label>
                                 <input 
                                     type="text"
                                     value={deployLabPrefix}
                                     onChange={e => setDeployLabPrefix(e.target.value)}
-                                    placeholder="e.g. net-lab-01"
+                                    placeholder="např. sit-lab-01"
                                 />
                             </div>
-                            <div style={{ padding: '8px 12px', background: '#eff6ff', borderRadius: '4px', fontSize: '12px', color: '#1e40af', marginBottom: '16px' }}>
-                                This will instantiate {deployingLab.vms?.length || 0} virtual machines across the cluster and interconnect them on dedicated VLAN point-to-point links.
+                            <div style={{ padding: '8px 12px', background: 'var(--primary-subtle)', borderRadius: '6px', fontSize: '12px', color: 'var(--primary-color)', marginBottom: '16px', border: '1px solid var(--border-color)' }}>
+                                Tato akce vytvoří {deployingLab.vms?.length || 0} virtuálních strojů napříč clusterem a propojí je vyhrazenými VLAN spoji.
                             </div>
                             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
                                 <button type="button" className="btn btn-secondary" onClick={() => setDeployingLab(null)} disabled={isDeploying}>
-                                    Cancel
+                                    Zrušit
                                 </button>
                                 <button type="submit" className="btn btn-primary" disabled={isDeploying}>
-                                    {isDeploying ? 'Deploying Topology...' : 'Launch Lab Instance'}
+                                    {isDeploying ? 'Nasazování topologie...' : 'Spustit instanci'}
                                 </button>
                             </div>
                         </form>
@@ -288,41 +288,41 @@ export function TeacherView({
                 </div>
             )}
 
-            <div style={{ display: 'flex', gap: '8px', marginBottom: '16px', borderBottom: '1px solid var(--border-color)', paddingBottom: '8px' }}>
+            <div style={{ display: 'flex', gap: '8px', marginBottom: '16px', borderBottom: '1px solid var(--border-color)', paddingBottom: '8px', flexWrap: 'wrap' }}>
                 <button 
                     className={`btn btn-sm ${activeTab === 'labs' ? 'btn-primary' : 'btn-secondary'}`}
                     onClick={() => setActiveTab('labs')}
                 >
-                    Labs & Scenarios ({labTemplates.length})
+                    Laboratoře a scénáře ({labTemplates.length})
                 </button>
                 <button 
                     className={`btn btn-sm ${activeTab === 'templates' ? 'btn-primary' : 'btn-secondary'}`}
                     onClick={() => setActiveTab('templates')}
                 >
-                    Templates Manager ({templates.length})
+                    Správce šablon ({templates.length})
                 </button>
                 <button 
                     className={`btn btn-sm ${activeTab === 'fleet' ? 'btn-primary' : 'btn-secondary'}`}
                     onClick={() => setActiveTab('fleet')}
                 >
-                    Cluster Fleet & Nodes ({nodes.length})
+                    Cluster a uzly ({nodes.length})
                 </button>
                 <button 
                     className={`btn btn-sm ${activeTab === 'students' ? 'btn-primary' : 'btn-secondary'}`}
                     onClick={() => setActiveTab('students')}
                 >
-                    Classroom & Students ({students.length})
+                    Třída a studenti ({students.length})
                 </button>
             </div>
 
             {activeTab === 'labs' && (
                 <div>
                     <div className="card" style={{ marginBottom: '20px' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '12px' }}>
                             <div>
-                                <h3 style={{ margin: 0 }}>Networking & Cybersecurity Lab Curricula</h3>
+                                <h3 style={{ margin: 0 }}>Výukové scénáře pro sítě a kyberbezpečnost</h3>
                                 <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: 'var(--text-muted)' }}>
-                                    Standardized lab topologies with automated multi-node placement and VLAN interconnects
+                                    Standardizované laboratorní topologie s automatickým rozmístěním na uzly a VLAN propojením
                                 </p>
                             </div>
                             <div style={{ display: 'flex', gap: '8px' }}>
@@ -330,14 +330,14 @@ export function TeacherView({
                                     className="btn btn-primary btn-sm"
                                     onClick={() => setIsCreateLabOpen(true)}
                                 >
-                                    + Create New Lab Scenario
+                                    + Vytvořit nový laboratorní scénář
                                 </button>
                                 <button 
                                     className="btn btn-secondary btn-sm" 
                                     onClick={fetchLabs}
                                     disabled={isLoading}
                                 >
-                                    {isLoading ? 'Refreshing...' : 'Refresh'}
+                                    {isLoading ? 'Obnovování...' : 'Obnovit'}
                                 </button>
                             </div>
                         </div>
@@ -350,7 +350,7 @@ export function TeacherView({
                                         padding: '16px',
                                         borderRadius: '8px',
                                         border: '1px solid var(--border-color)',
-                                        backgroundColor: '#ffffff',
+                                        backgroundColor: 'var(--card-bg-subtle)',
                                         display: 'flex',
                                         flexDirection: 'column',
                                         justifyContent: 'space-between'
@@ -377,7 +377,7 @@ export function TeacherView({
 
                                         <div style={{ marginBottom: '12px' }}>
                                             <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '4px' }}>
-                                                Topology Machines ({lab.vms?.length || 0}):
+                                                Stroje v topologii ({lab.vms?.length || 0}):
                                             </div>
                                             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
                                                 {lab.vms?.map((vm, i) => (
@@ -385,8 +385,8 @@ export function TeacherView({
                                                         key={i}
                                                         style={{ 
                                                             fontSize: '11px', 
-                                                            background: '#eff6ff', 
-                                                            color: '#1e40af', 
+                                                            background: 'var(--primary-subtle)', 
+                                                            color: 'var(--primary-color)', 
                                                             padding: '2px 8px', 
                                                             borderRadius: '4px',
                                                             fontFamily: 'monospace' 
@@ -401,7 +401,7 @@ export function TeacherView({
                                         {lab.networks && lab.networks.length > 0 && (
                                             <div style={{ marginBottom: '12px' }}>
                                                 <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '4px' }}>
-                                                    Links & Segments ({lab.networks.length}):
+                                                    Spoje a segmenty ({lab.networks.length}):
                                                 </div>
                                                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
                                                     {lab.networks.map((net, i) => (
@@ -409,8 +409,8 @@ export function TeacherView({
                                                             key={i}
                                                             style={{ 
                                                                 fontSize: '10px', 
-                                                                background: '#f3f4f6', 
-                                                                color: '#374151', 
+                                                                background: 'var(--badge-bg)', 
+                                                                color: 'var(--text-main)', 
                                                                 padding: '2px 6px', 
                                                                 borderRadius: '4px' 
                                                             }}
@@ -423,19 +423,19 @@ export function TeacherView({
                                         )}
                                     </div>
 
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '12px', borderTop: '1px solid #f3f4f6', paddingTop: '10px' }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '12px', borderTop: '1px solid var(--border-color)', paddingTop: '10px' }}>
                                         <button 
                                             className="btn btn-primary btn-sm"
                                             onClick={() => setDeployingLab(lab)}
                                         >
-                                            Deploy Lab Scenario
+                                            Nasadit scénář
                                         </button>
                                         <button 
                                             className="btn btn-secondary btn-sm"
                                             onClick={() => handleDeleteTemplate(lab.id)}
-                                            style={{ color: '#ef4444' }}
+                                            style={{ color: 'var(--danger-color)' }}
                                         >
-                                            Delete
+                                            Smazat
                                         </button>
                                     </div>
                                 </div>
@@ -443,23 +443,23 @@ export function TeacherView({
 
                             {labTemplates.length === 0 && (
                                 <div style={{ gridColumn: '1 / -1', textAlign: 'center', color: 'var(--text-muted)', padding: '32px' }}>
-                                    No lab blueprints found. Create a new lab blueprint above.
+                                    Nebyly nalezeny žádné návrhy laboratoří. Vytvořte nový návrh výše.
                                 </div>
                             )}
                         </div>
                     </div>
 
                     <div className="card">
-                        <h3 style={{ margin: '0 0 12px 0' }}>Active Lab Deployments ({labInstances.length})</h3>
+                        <h3 style={{ margin: '0 0 12px 0' }}>Aktivní nasazené laboratoře ({labInstances.length})</h3>
                         <table className="vm-table">
                             <thead>
                                 <tr>
-                                    <th>Lab Name</th>
-                                    <th>Instance ID</th>
-                                    <th>Student / Owner</th>
-                                    <th>Status</th>
-                                    <th>Deployed VMs</th>
-                                    <th>Actions</th>
+                                    <th>Název laboratoře</th>
+                                    <th>ID instance</th>
+                                    <th>Student / Vlastník</th>
+                                    <th>Stav</th>
+                                    <th>Nasazené stroje</th>
+                                    <th>Akce</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -470,11 +470,11 @@ export function TeacherView({
                                             {inst.id}
                                         </td>
                                         <td style={{ fontSize: '12px' }}>
-                                            {inst.owner_email || (inst.owner_uuid ? inst.owner_uuid.slice(0, 8) + '...' : 'Teacher')}
+                                            {inst.owner_email || (inst.owner_uuid ? inst.owner_uuid.slice(0, 8) + '...' : 'Učitel')}
                                         </td>
                                         <td>
                                             <span className={`status-badge ${inst.status === 'running' ? 'status-running' : 'status-stopped'}`}>
-                                                {inst.status || 'Provisioned'}
+                                                {inst.status === 'running' ? 'BĚŽÍ' : 'PŘIPRAVENO'}
                                             </span>
                                         </td>
                                         <td>
@@ -485,7 +485,7 @@ export function TeacherView({
                                                         style={{ 
                                                             fontSize: '11px', 
                                                             padding: '2px 6px', 
-                                                            background: '#e5e7eb', 
+                                                            background: 'var(--badge-bg)', 
                                                             borderRadius: '4px',
                                                             fontFamily: 'monospace' 
                                                         }}
@@ -502,21 +502,21 @@ export function TeacherView({
                                                         className="btn btn-success btn-sm"
                                                         onClick={() => handleStartInstance(inst.id)}
                                                     >
-                                                        Start
+                                                        Spustit
                                                     </button>
                                                 ) : (
                                                     <button 
                                                         className="btn btn-warning btn-sm"
                                                         onClick={() => handleStopInstance(inst.id)}
                                                     >
-                                                        Stop
+                                                        Zastavit
                                                     </button>
                                                 )}
                                                 <button 
                                                     className="btn btn-danger btn-sm"
                                                     onClick={() => handleDeleteInstance(inst.id)}
                                                 >
-                                                    Delete
+                                                    Smazat
                                                 </button>
                                             </div>
                                         </td>
@@ -525,7 +525,7 @@ export function TeacherView({
                                 {labInstances.length === 0 && (
                                     <tr>
                                         <td colSpan={6} className="text-center text-muted" style={{ padding: '24px' }}>
-                                            No active lab instances running. Deploy a scenario above to test.
+                                            Zatím neběží žádné laboratorní instance. Pro testování nasaďte scénář výše.
                                         </td>
                                     </tr>
                                 )}

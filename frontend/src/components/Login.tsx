@@ -8,19 +8,20 @@ interface LoginProps {
 export function Login({ onLoginSuccess }: LoginProps) {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
-    const [loginError, setLoginError] = useState('');
+    const [error, setError] = useState('');
     const [isLoading, setIsLoading] = useState(false);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        setLoginError('');
+        setError('');
 
         if (!email.trim() || !password) {
-            setLoginError('Please enter both email and password.');
+            setError('Zadejte prosím e-mail i heslo.');
             return;
         }
 
         setIsLoading(true);
+
         try {
             let token = '';
             let userEmail = email.trim();
@@ -37,13 +38,13 @@ export function Login({ onLoginSuccess }: LoginProps) {
                     resp = await fetch('/auth/login', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ email: userEmail, password }),
+                        body: JSON.stringify({ email: userEmail, password })
                     });
                 } catch {
                     resp = await fetch('http://localhost:8080/auth/login', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ email: userEmail, password }),
+                        body: JSON.stringify({ email: userEmail, password })
                     });
                 }
 
@@ -51,29 +52,24 @@ export function Login({ onLoginSuccess }: LoginProps) {
                     const data = await resp.json();
                     token = data.token;
                     role = data.role || '';
-                } else if (resp.status === 500) {
-                    throw new Error('Invalid email or password.');
+                } else if (resp.status === 500 || resp.status === 401) {
+                    throw new Error('Neplatný e-mail nebo heslo.');
                 } else if (resp.status === 400) {
-                    throw new Error('Invalid request format.');
+                    throw new Error('Neplatný formát požadavku na přihlášení.');
                 } else {
-                    throw new Error(`Login failed with HTTP status ${resp.status}`);
+                    throw new Error(`Chyba serveru (${resp.status}). Zkuste to prosím znovu.`);
                 }
             }
 
             if (!token) {
-                throw new Error('No session token received.');
+                throw new Error('Ze serveru nebyl obdržen žádný bezpečnostní token.');
             }
 
             onLoginSuccess(token, userEmail, role);
             setPassword('');
         } catch (err: any) {
             console.error('Login failed:', err);
-            const msg = err?.message || String(err);
-            if (msg.includes('Failed to fetch') || msg.includes('failed to reach backend') || msg.includes('connection refused')) {
-                setLoginError('Cannot connect to backend server. Please make sure the backend is running on http://localhost:8080.');
-            } else {
-                setLoginError(msg);
-            }
+            setError(err?.message || 'Nepodařilo se připojit k autentizačnímu serveru.');
         } finally {
             setIsLoading(false);
         }
@@ -82,40 +78,63 @@ export function Login({ onLoginSuccess }: LoginProps) {
     return (
         <div className="login-container">
             <div className="card login-card">
-                <h2 className="text-center">VM Manager Login</h2>
-                {loginError && <div className="message error">{loginError}</div>}
+                <div className="login-header">
+                    <div style={{ display: 'inline-flex', padding: '12px', background: 'var(--primary-subtle)', borderRadius: '12px', marginBottom: '12px', color: 'var(--primary-color)' }}>
+                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <rect x="2" y="2" width="20" height="8" rx="2" ry="2"></rect>
+                            <rect x="2" y="14" width="20" height="8" rx="2" ry="2"></rect>
+                            <line x1="6" y1="6" x2="6.01" y2="6"></line>
+                            <line x1="6" y1="18" x2="6.01" y2="18"></line>
+                        </svg>
+                    </div>
+                    <h2>Správce Virtuálních Strojů</h2>
+                    <p>Přihlášení do výukového laboratorního prostředí</p>
+                </div>
+
+                {error && (
+                    <div className="message error" style={{ marginBottom: '16px' }}>
+                        {error}
+                    </div>
+                )}
+
                 <form className="login-form" onSubmit={handleSubmit}>
                     <div className="form-group">
-                        <label>Email</label>
+                        <label>Uživatelské jméno nebo e-mail</label>
                         <input 
                             type="text" 
                             value={email} 
                             onChange={(e) => setEmail(e.target.value)} 
-                            placeholder="admin or name@example.com"
+                            placeholder="admin nebo ucitel@skola.cz"
                             required
                             disabled={isLoading}
                             autoFocus
                         />
                     </div>
-                    <div className="form-group" style={{ marginTop: '16px' }}>
-                        <label>Password</label>
+
+                    <div className="form-group">
+                        <label>Heslo</label>
                         <input 
                             type="password" 
                             value={password} 
                             onChange={(e) => setPassword(e.target.value)} 
-                            placeholder="password"
+                            placeholder="heslo"
                             required
                             disabled={isLoading}
                         />
                     </div>
+
                     <button 
                         type="submit" 
                         className="btn btn-primary login-btn"
                         disabled={isLoading}
                     >
-                        {isLoading ? 'Logging in...' : 'Login'}
+                        {isLoading ? 'Ověřování přihlášení...' : 'Přihlásit se'}
                     </button>
                 </form>
+
+                <div className="login-hint">
+                    Přihlaste se svými školními přístupovými údaji.
+                </div>
             </div>
         </div>
     );

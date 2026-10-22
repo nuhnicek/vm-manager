@@ -12,7 +12,12 @@ export function NetworkMap({ vms }: NetworkMapProps) {
     useEffect(() => {
         if (!ref.current) return;
 
-        (mermaid.initialize as any)({ startOnLoad: false, theme: 'default', useMaxWidth: false });
+        const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+        (mermaid.initialize as any)({ 
+            startOnLoad: false, 
+            theme: isDark ? 'dark' : 'default', 
+            useMaxWidth: false 
+        });
 
         let graphDef = 'graph LR\n';
         const drawnLinks = new Set<string>();
@@ -34,7 +39,7 @@ export function NetworkMap({ vms }: NetworkMapProps) {
         });
 
         if (vms.length === 0) {
-            graphDef += `  empty["No Proxmox VMs found"]\n`;
+            graphDef += `  empty["Žádné virtuální stroje nebyly nalezeny"]\n`;
         }
 
         try {
@@ -55,3 +60,4 @@ export function NetworkMap({ vms }: NetworkMapProps) {
         </div>
     );
 }
+
