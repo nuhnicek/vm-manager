@@ -5,11 +5,11 @@ interface VMTableProps {
     userRole?: string;
     isRefreshing: boolean;
     onRefresh: () => void;
-    onStartVM: (id: string, name: string) => void;
-    onStopVM: (id: string, name: string) => void;
-    onOpenConsole: (id: string) => void;
+    onStartVM: (id: string, name: string, node?: string) => void;
+    onStopVM: (id: string, name: string, node?: string) => void;
+    onOpenConsole: (id: string, node?: string) => void;
     onManageNetworking: (vm: main.VM) => void;
-    onDeleteVM: (id: string, name: string) => void;
+    onDeleteVM: (id: string, name: string, node?: string) => void;
 }
 
 export function VMTable({
@@ -61,7 +61,7 @@ export function VMTable({
                             const isRunning = vm.status === 'Running' || vm.status === 'running';
 
                             return (
-                                <tr key={vm.id}>
+                                <tr key={`${(vm as any).node || 'pve'}-${vm.id}`}>
                                     <td>
                                         <span className="mono-tag" style={{ fontWeight: 600, color: 'var(--primary-color)' }}>
                                             {vm.id}
@@ -104,14 +104,14 @@ export function VMTable({
                                             {!isRunning ? (
                                                 <button 
                                                     className="btn btn-success btn-sm" 
-                                                    onClick={() => onStartVM(String(vm.id), vm.name)}
+                                                    onClick={() => onStartVM(String(vm.id), vm.name, (vm as any).node)}
                                                 >
                                                     Spustit
                                                 </button>
                                             ) : (
                                                 <button 
                                                     className="btn btn-warning btn-sm" 
-                                                    onClick={() => onStopVM(String(vm.id), vm.name)}
+                                                    onClick={() => onStopVM(String(vm.id), vm.name, (vm as any).node)}
                                                 >
                                                     Zastavit
                                                 </button>
@@ -119,7 +119,7 @@ export function VMTable({
                                             
                                             <button 
                                                 className="btn btn-primary btn-sm" 
-                                                onClick={() => onOpenConsole(String(vm.id))}
+                                                onClick={() => onOpenConsole(String(vm.id), (vm as any).node)}
                                             >
                                                 Konzole
                                             </button>
@@ -133,7 +133,7 @@ export function VMTable({
                                             
                                             <button 
                                                 className="btn btn-danger btn-sm" 
-                                                onClick={() => onDeleteVM(String(vm.id), vm.name)}
+                                                onClick={() => onDeleteVM(String(vm.id), vm.name, (vm as any).node)}
                                             >
                                                 Smazat
                                             </button>

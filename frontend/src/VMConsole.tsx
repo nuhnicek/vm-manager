@@ -8,12 +8,13 @@ import '@xterm/xterm/css/xterm.css';
 interface VMConsoleProps {
     vmId?: string | number;
     vmName: string;
+    vmNode?: string;
     token?: string;
     onClose: () => void;
     onPopOut?: () => void;
 }
 
-async function resolveWebSocketUrl(vmId: string | number, tokenOverride: string | undefined, endpoint: 'vnc' | 'ws'): Promise<string> {
+async function resolveWebSocketUrl(vmId: string | number, tokenOverride: string | undefined, endpoint: 'vnc' | 'ws', vmNode?: string): Promise<string> {
     const token = tokenOverride || localStorage.getItem('vm_manager_token') || '';
     let backendUrl = 'http://10.0.10.52:8080';
     if (typeof window !== 'undefined' && (window as any).go?.main?.App?.GetBackendURL) {
@@ -27,10 +28,14 @@ async function resolveWebSocketUrl(vmId: string | number, tokenOverride: string 
 
     const wsProto = backendUrl.startsWith('https') ? 'wss:' : 'ws:';
     const host = backendUrl.replace(/^https?:\/\//, '');
-    return `${wsProto}//${host}/vms/console/${endpoint}?vmid=${encodeURIComponent(String(vmId))}&token=${encodeURIComponent(token)}`;
+    let url = `${wsProto}//${host}/vms/console/${endpoint}?vmid=${encodeURIComponent(String(vmId))}&token=${encodeURIComponent(token)}`;
+    if (vmNode) {
+        url += `&node=${encodeURIComponent(vmNode)}`;
+    }
+    return url;
 }
 
-export function VMConsole({ vmId, vmName, token, onClose, onPopOut }: VMConsoleProps) {
+export function VMConsole({ vmId, vmName, vmNode, token, onClose, onPopOut }: VMConsoleProps) {
     const [consoleMode, setConsoleMode] = useState<'vnc' | 'serial'>('vnc');
     const [status, setStatus] = useState<'connecting' | 'connected' | 'disconnected' | 'error'>('connecting');
     const [statusMessage, setStatusMessage] = useState<string>('Inicializace konzole...');
@@ -56,7 +61,7 @@ export function VMConsole({ vmId, vmName, token, onClose, onPopOut }: VMConsoleP
                 setStatus('connecting');
                 setStatusMessage('Připojování k obrazovce VM (VNC)...');
 
-                const vncUrl = await resolveWebSocketUrl(vmId, token, 'vnc');
+                const vncUrl = await resolveWebSocketUrl(vmId, token, 'vnc', vmNode);
                 if (isDisposed) return;
 
                 if (!vncContainerRef.current) return;
@@ -115,7 +120,7 @@ export function VMConsole({ vmId, vmName, token, onClose, onPopOut }: VMConsoleP
                 vncContainerRef.current.innerHTML = '';
             }
         };
-    }, [consoleMode, vmId, vmName, token, connectAttempt]);
+    }, [consoleMode, vmId, vmName, vmNode, token, connectAttempt]);
 
     useEffect(() => {
         if (consoleMode !== 'serial' || !terminalRef.current) return;
@@ -155,7 +160,7 @@ export function VMConsole({ vmId, vmName, token, onClose, onPopOut }: VMConsoleP
             try {
                 setStatus('connecting');
                 setStatusMessage('Připojování k sériové konzoli...');
-                const wsUrl = await resolveWebSocketUrl(vmId, token, 'ws');
+                const wsUrl = await resolveWebSocketUrl(vmId, token, 'ws', vmNode);
                 ws = new WebSocket(wsUrl);
                 ws.binaryType = 'arraybuffer';
 
@@ -222,7 +227,7 @@ export function VMConsole({ vmId, vmName, token, onClose, onPopOut }: VMConsoleP
             }
             term.dispose();
         };
-    }, [consoleMode, vmId, vmName, token, connectAttempt]);
+    }, [consoleMode, vmId, vmName, vmNode, token, connectAttempt]);
 
     return (
         <div style={{

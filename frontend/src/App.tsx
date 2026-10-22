@@ -282,7 +282,7 @@ function App() {
         setSelectedNode('');
     };
 
-    const executeAction = async (actionFn: (id: string) => Promise<string>, id: string, endpoint?: string) => {
+    const executeAction = async (actionFn: (id: string) => Promise<string>, id: string, endpoint?: string, node?: string) => {
         try {
             if (typeof window !== 'undefined' && (window as any).go?.main?.App) {
                 const result = await actionFn(id);
@@ -290,7 +290,10 @@ function App() {
             } else if (endpoint) {
                 const token = authToken || localStorage.getItem('vm_manager_token') || '';
                 const vmid = parseInt(id, 10);
-                const payload = { id: isNaN(vmid) ? id : vmid };
+                const payload: any = { id: isNaN(vmid) ? id : vmid };
+                if (node) {
+                    payload.node = node;
+                }
                 let resp = await fetch(endpoint, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'Authorization': token },
@@ -318,32 +321,33 @@ function App() {
         actionFn: (id: string) => Promise<string>,
         id: string,
         confirmMsg: string,
-        endpoint?: string
+        endpoint?: string,
+        node?: string
     ) => {
         setConfirmDialog({
             isOpen: true,
             message: confirmMsg,
             onConfirm: () => {
                 setConfirmDialog(prev => ({ ...prev, isOpen: false }));
-                executeAction(actionFn, id, endpoint);
+                executeAction(actionFn, id, endpoint, node);
             }
         });
     };
 
-    const handleStartVM = (id: string, _name: string) => {
-        executeAction(StartVM, id, '/vms/start');
+    const handleStartVM = (id: string, _name: string, node?: string) => {
+        executeAction(StartVM, id, '/vms/start', node);
     };
 
-    const handleStopVM = (id: string, name: string) => {
-        handleActionWithConfirm(StopVM, id, `Opravdu chcete zastavit virtuální stroj ${name}?`, '/vms/stop');
+    const handleStopVM = (id: string, name: string, node?: string) => {
+        handleActionWithConfirm(StopVM, id, `Opravdu chcete zastavit virtuální stroj ${name}?`, '/vms/stop', node);
     };
 
-    const handleDeleteVM = (id: string, name: string) => {
-        handleActionWithConfirm(DeleteVM, id, `Opravdu chcete SMAZAT virtuální stroj ${name}? Tuto akci nelze vrátit.`, '/vms/delete');
+    const handleDeleteVM = (id: string, name: string, node?: string) => {
+        handleActionWithConfirm(DeleteVM, id, `Opravdu chcete SMAZAT virtuální stroj ${name}? Tuto akci nelze vrátit.`, '/vms/delete', node);
     };
 
-    const handleOpenConsole = (id: string) => {
-        const targetVM = vms.find(v => String(v.id) === id);
+    const handleOpenConsole = (id: string, node?: string) => {
+        const targetVM = vms.find(v => String(v.id) === id && (!node || (v as any).node === node));
         if (!targetVM) {
             setMessage(`Chyba: Virtuální stroj ${id} nebyl nalezen`);
             return;
@@ -599,6 +603,7 @@ function App() {
                 <VMConsole 
                     vmId={activeConsoleVM.id}
                     vmName={activeConsoleVM.name}
+                    vmNode={(activeConsoleVM as any).node}
                     token={authToken}
                     onClose={() => setActiveConsoleVM(null)}
                     onPopOut={typeof window !== 'undefined' && (window as any).go?.main?.App?.OpenConsole ? () => handlePopOutConsole(String(activeConsoleVM.id)) : undefined}
