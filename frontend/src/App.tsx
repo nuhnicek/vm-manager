@@ -105,7 +105,7 @@ function App() {
                         const resp = await fetch('/ping', {
                             headers: { 'Authorization': savedToken }
                         }).catch(async () => {
-                            return await fetch('http://127.0.0.1:8080/ping', {
+                            return await fetch('http://10.0.10.52:8080/ping', {
                                 headers: { 'Authorization': savedToken }
                             });
                         });
@@ -162,7 +162,7 @@ function App() {
                         headers: { 'Authorization': token }
                     });
                 } catch {
-                    resp = await fetch('http://127.0.0.1:8080/nodes', {
+                    resp = await fetch('http://10.0.10.52:8080/nodes', {
                         headers: { 'Authorization': token }
                     });
                 }
@@ -191,7 +191,7 @@ function App() {
                         headers: { 'Authorization': token }
                     });
                 } catch {
-                    resp = await fetch('http://127.0.0.1:8080/vms', {
+                    resp = await fetch('http://10.0.10.52:8080/vms', {
                         headers: { 'Authorization': token }
                     });
                 }
@@ -224,7 +224,7 @@ function App() {
                         headers: { 'Authorization': token }
                     });
                 } catch {
-                    resp = await fetch('http://127.0.0.1:8080/vms/templates', {
+                    resp = await fetch('http://10.0.10.52:8080/vms/templates', {
                         headers: { 'Authorization': token }
                     });
                 }
@@ -292,7 +292,7 @@ function App() {
                     headers: { 'Content-Type': 'application/json', 'Authorization': token },
                     body: JSON.stringify(payload)
                 }).catch(async () => {
-                    return await fetch('http://127.0.0.1:8080' + endpoint, {
+                    return await fetch('http://10.0.10.52:8080' + endpoint, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json', 'Authorization': token },
                         body: JSON.stringify(payload)
@@ -393,7 +393,7 @@ function App() {
                         body: JSON.stringify(payload)
                     });
                 } catch {
-                    resp = await fetch('http://127.0.0.1:8080/vms/create', {
+                    resp = await fetch('http://10.0.10.52:8080/vms/create', {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
@@ -429,7 +429,7 @@ function App() {
                     headers: { 'Content-Type': 'application/json', 'Authorization': token },
                     body: JSON.stringify({ vmid })
                 }).catch(async () => {
-                    return await fetch('http://127.0.0.1:8080/vms/network/add-nic', {
+                    return await fetch('http://10.0.10.52:8080/vms/network/add-nic', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json', 'Authorization': token },
                         body: JSON.stringify({ vmid })
@@ -458,7 +458,7 @@ function App() {
                     headers: { 'Content-Type': 'application/json', 'Authorization': token },
                     body: JSON.stringify({ vmid, nic })
                 }).catch(async () => {
-                    return await fetch('http://127.0.0.1:8080/vms/network/remove', {
+                    return await fetch('http://10.0.10.52:8080/vms/network/remove', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json', 'Authorization': token },
                         body: JSON.stringify({ vmid, nic })
@@ -488,7 +488,7 @@ function App() {
                     headers: { 'Content-Type': 'application/json', 'Authorization': token },
                     body: JSON.stringify({ vmid1, vmid2, nic1: localNic, nic2: targetNic })
                 }).catch(async () => {
-                    return await fetch('http://127.0.0.1:8080/vms/network/create', {
+                    return await fetch('http://10.0.10.52:8080/vms/network/create', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json', 'Authorization': token },
                         body: JSON.stringify({ vmid1, vmid2, nic1: localNic, nic2: targetNic })
@@ -518,7 +518,7 @@ function App() {
                     headers: { 'Content-Type': 'application/json', 'Authorization': token },
                     body: JSON.stringify({ vmid1, vmid2 })
                 }).catch(async () => {
-                    return await fetch('http://127.0.0.1:8080/vms/network/disconnect', {
+                    return await fetch('http://10.0.10.52:8080/vms/network/disconnect', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json', 'Authorization': token },
                         body: JSON.stringify({ vmid1, vmid2 })

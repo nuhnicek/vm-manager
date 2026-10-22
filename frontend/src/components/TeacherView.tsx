@@ -45,7 +45,7 @@ export function TeacherView({
             try {
                 respTpl = await fetch('/labs/templates', { headers: { 'Authorization': token } });
             } catch {
-                respTpl = await fetch('http://127.0.0.1:8080/labs/templates', { headers: { 'Authorization': token } });
+                respTpl = await fetch('http://10.0.10.52:8080/labs/templates', { headers: { 'Authorization': token } });
             }
             if (respTpl.ok) {
                 const data = await respTpl.json();
@@ -56,7 +56,7 @@ export function TeacherView({
             try {
                 respInst = await fetch('/labs/instances', { headers: { 'Authorization': token } });
             } catch {
-                respInst = await fetch('http://127.0.0.1:8080/labs/instances', { headers: { 'Authorization': token } });
+                respInst = await fetch('http://10.0.10.52:8080/labs/instances', { headers: { 'Authorization': token } });
             }
             if (respInst.ok) {
                 const data = await respInst.json();
@@ -67,7 +67,7 @@ export function TeacherView({
             try {
                 respStudents = await fetch('/teacher/students', { headers: { 'Authorization': token } });
             } catch {
-                respStudents = await fetch('http://127.0.0.1:8080/teacher/students', { headers: { 'Authorization': token } });
+                respStudents = await fetch('http://10.0.10.52:8080/teacher/students', { headers: { 'Authorization': token } });
             }
             if (respStudents.ok) {
                 const stData = await respStudents.json();
@@ -103,7 +103,7 @@ export function TeacherView({
                     body: JSON.stringify(payload)
                 });
             } catch {
-                resp = await fetch('http://127.0.0.1:8080/labs/deploy', {
+                resp = await fetch('http://10.0.10.52:8080/labs/deploy', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'Authorization': token },
                     body: JSON.stringify(payload)
@@ -139,7 +139,7 @@ export function TeacherView({
                     headers: { 'Authorization': token }
                 });
             } catch {
-                resp = await fetch(`http://127.0.0.1:8080/labs/instances/${id}/start`, {
+                resp = await fetch(`http://10.0.10.52:8080/labs/instances/${id}/start`, {
                     method: 'POST',
                     headers: { 'Authorization': token }
                 });
@@ -163,7 +163,7 @@ export function TeacherView({
                     headers: { 'Authorization': token }
                 });
             } catch {
-                resp = await fetch(`http://127.0.0.1:8080/labs/instances/${id}/stop`, {
+                resp = await fetch(`http://10.0.10.52:8080/labs/instances/${id}/stop`, {
                     method: 'POST',
                     headers: { 'Authorization': token }
                 });
@@ -188,7 +188,7 @@ export function TeacherView({
                     headers: { 'Authorization': token }
                 });
             } catch {
-                resp = await fetch(`http://127.0.0.1:8080/labs/instances/${id}`, {
+                resp = await fetch(`http://10.0.10.52:8080/labs/instances/${id}`, {
                     method: 'DELETE',
                     headers: { 'Authorization': token }
                 });
@@ -214,7 +214,7 @@ export function TeacherView({
                     headers: { 'Authorization': token }
                 });
             } catch {
-                resp = await fetch(`http://127.0.0.1:8080/labs/templates/${id}`, {
+                resp = await fetch(`http://10.0.10.52:8080/labs/templates/${id}`, {
                     method: 'DELETE',
                     headers: { 'Authorization': token }
                 });

@@ -154,7 +154,7 @@ export function CreateLabModal({ isOpen, onClose, templates, token, onLabCreated
                     body: JSON.stringify(payload)
                 });
             } catch {
-                resp = await fetch('http://127.0.0.1:8080/labs/templates', {
+                resp = await fetch('http://10.0.10.52:8080/labs/templates', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',

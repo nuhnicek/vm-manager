@@ -15,7 +15,7 @@ interface VMConsoleProps {
 
 async function resolveWebSocketUrl(vmId: string | number, tokenOverride: string | undefined, endpoint: 'vnc' | 'ws'): Promise<string> {
     const token = tokenOverride || localStorage.getItem('vm_manager_token') || '';
-    let backendUrl = 'http://127.0.0.1:8080';
+    let backendUrl = 'http://10.0.10.52:8080';
     if (typeof window !== 'undefined' && (window as any).go?.main?.App?.GetBackendURL) {
         try {
             const configured = await GetBackendURL();
