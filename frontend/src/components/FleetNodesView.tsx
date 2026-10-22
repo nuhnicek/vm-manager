@@ -113,17 +113,13 @@ export function FleetNodesView({ nodes, token, onMessage, onRefreshNodes }: Flee
                     <div 
                         key={node.name}
                         onClick={() => setSelectedNodeFilter(prev => prev === node.name ? '' : node.name)}
-                        style={{
-                            padding: '12px',
-                            borderRadius: '8px',
-                            border: selectedNodeFilter === node.name ? '2px solid var(--primary-color)' : '1px solid var(--border-color)',
-                            backgroundColor: selectedNodeFilter === node.name ? 'var(--primary-subtle)' : 'var(--card-bg-subtle)',
-                            cursor: 'pointer'
-                        }}
+                        className={`node-card ${selectedNodeFilter === node.name ? 'selected' : ''}`}
+                        style={{ cursor: 'pointer' }}
                     >
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
                             <strong style={{ fontSize: '14px' }}>{node.name}</strong>
                             <span className={`status-badge ${node.status === 'online' ? 'status-running' : 'status-stopped'}`}>
+                                <span className="status-badge-dot"></span>
                                 {node.status === 'online' ? 'ONLINE' : 'OFFLINE'}
                             </span>
                         </div>
@@ -151,47 +147,54 @@ export function FleetNodesView({ nodes, token, onMessage, onRefreshNodes }: Flee
                 )}
             </div>
 
-            <table className="vm-table">
-                <thead>
-                    <tr>
-                        <th>VMID</th>
-                        <th>Název</th>
-                        <th>Uzel</th>
-                        <th>Vlastník</th>
-                        <th>Stav</th>
-                        <th>RAM</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {filteredVMs.map(vm => (
-                        <tr key={vm.id}>
-                            <td style={{ fontFamily: 'monospace', fontWeight: 600 }}>{vm.id}</td>
-                            <td className="fw-500">{vm.name}</td>
-                            <td>
-                                <span style={{ fontFamily: 'monospace', fontSize: '12px', padding: '2px 6px', background: 'var(--badge-bg)', borderRadius: '4px' }}>
-                                    {vm.node || 'pve'}
-                                </span>
-                            </td>
-                            <td style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
-                                {vm.owner_email || vm.owner || (vm.owner_uuid ? vm.owner_uuid.slice(0, 8) + '...' : 'Systém')}
-                            </td>
-                            <td>
-                                <span className={`status-badge ${vm.status === 'Running' ? 'status-running' : 'status-stopped'}`}>
-                                    {vm.status === 'Running' ? 'BĚŽÍ' : 'ZASTAVENO'}
-                                </span>
-                            </td>
-                            <td>{vm.ram_mb ? `${vm.ram_mb} MB` : '-'}</td>
-                        </tr>
-                    ))}
-                    {filteredVMs.length === 0 && (
+            <div className="table-container">
+                <table className="vm-table">
+                    <thead>
                         <tr>
-                            <td colSpan={6} className="text-center text-muted" style={{ padding: '24px' }}>
-                                Nebyly nalezeny žádné virtuální stroje v clusteru.
-                            </td>
+                            <th>VMID</th>
+                            <th>Název</th>
+                            <th>Uzel</th>
+                            <th>Vlastník</th>
+                            <th>Stav</th>
+                            <th>RAM</th>
                         </tr>
-                    )}
-                </tbody>
-            </table>
+                    </thead>
+                    <tbody>
+                        {filteredVMs.map(vm => (
+                            <tr key={vm.id}>
+                                <td>
+                                    <span className="mono-tag" style={{ fontWeight: 600, color: 'var(--primary-color)' }}>
+                                        {vm.id}
+                                    </span>
+                                </td>
+                                <td className="fw-500">{vm.name}</td>
+                                <td>
+                                    <span className="mono-tag">
+                                        {vm.node || 'pve'}
+                                    </span>
+                                </td>
+                                <td style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+                                    {vm.owner_email || vm.owner || (vm.owner_uuid ? vm.owner_uuid.slice(0, 8) + '...' : 'Systém')}
+                                </td>
+                                <td>
+                                    <span className={`status-badge ${vm.status === 'Running' ? 'status-running' : 'status-stopped'}`}>
+                                        <span className="status-badge-dot"></span>
+                                        {vm.status === 'Running' ? 'BĚŽÍ' : 'ZASTAVENO'}
+                                    </span>
+                                </td>
+                                <td>{vm.ram_mb ? `${vm.ram_mb} MB` : '-'}</td>
+                            </tr>
+                        ))}
+                        {filteredVMs.length === 0 && (
+                            <tr>
+                                <td colSpan={6} className="text-center text-muted" style={{ padding: '24px' }}>
+                                    Žádné virtuální stroje neodpovídají zadanému filtru.
+                                </td>
+                            </tr>
+                        )}
+                    </tbody>
+                </table>
+            </div>
         </div>
     );
 }

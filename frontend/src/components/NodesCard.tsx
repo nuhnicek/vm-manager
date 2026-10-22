@@ -43,34 +43,23 @@ export function NodesCard({ nodes, isRefreshing, onRefresh, selectedNode, onSele
                         <div 
                             key={node.name}
                             onClick={() => onSelectNode && onSelectNode(isSelected ? '' : node.name)}
-                            style={{
-                                padding: '14px 16px',
-                                borderRadius: '10px',
-                                border: isSelected ? '2px solid var(--primary-color)' : '1px solid var(--border-color)',
-                                backgroundColor: isSelected ? 'var(--primary-subtle)' : 'var(--card-bg-subtle)',
-                                cursor: onSelectNode ? 'pointer' : 'default',
-                                transition: 'all 0.15s ease'
-                            }}
+                            className={`node-card ${isSelected ? 'selected' : ''}`}
+                            style={{ cursor: onSelectNode ? 'pointer' : 'default' }}
                         >
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                    <span style={{ 
-                                        width: '8px', 
-                                        height: '8px', 
-                                        borderRadius: '50%', 
-                                        backgroundColor: isOnline ? 'var(--success-color)' : 'var(--danger-color)',
-                                        display: 'inline-block' 
-                                    }}></span>
-                                    <strong style={{ fontSize: '15px' }}>{node.name}</strong>
+                                    <span className="status-badge-dot" style={{ backgroundColor: isOnline ? 'var(--success-text)' : 'var(--danger-text)' }}></span>
+                                    <strong style={{ fontSize: '14px' }}>{node.name}</strong>
                                 </div>
                                 <span className={`status-badge ${isOnline ? 'status-running' : 'status-stopped'}`}>
+                                    <span className="status-badge-dot"></span>
                                     {isOnline ? 'ONLINE' : 'OFFLINE'}
                                 </span>
                             </div>
                             <div style={{ fontSize: '12px', color: 'var(--text-muted)', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                                <div>URI: <span style={{ fontFamily: 'monospace' }}>{node.host_uri.replace('/api2/json', '')}</span></div>
+                                <div>URI: <span className="mono-tag">{node.host_uri.replace('/api2/json', '')}</span></div>
                                 {node.version && <div>PVE Verze: {node.version}</div>}
-                                <div style={{ marginTop: '4px', paddingTop: '4px', borderTop: '1px solid var(--border-color)' }}>
+                                <div style={{ marginTop: '4px', paddingTop: '4px', borderTop: '1px solid var(--border-subtle)' }}>
                                     VM Celkem: <strong>{node.total_vms || 0}</strong> ({node.running_vms || 0} běží)
                                 </div>
                             </div>

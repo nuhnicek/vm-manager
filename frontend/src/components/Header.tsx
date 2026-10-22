@@ -37,18 +37,16 @@ export function Header({
                 </div>
 
                 {isTeacher && (
-                    <div style={{ display: 'flex', background: 'var(--card-bg-subtle)', padding: '3px', borderRadius: '8px', border: '1px solid var(--border-color)', gap: '4px' }}>
+                    <div style={{ display: 'flex', background: 'var(--card-bg-subtle)', padding: '2px', borderRadius: '6px', border: '1px solid var(--border-color)', gap: '2px' }}>
                         <button 
                             className={`btn btn-sm ${currentView === 'student' ? 'btn-primary' : 'btn-secondary'}`}
                             onClick={() => onViewChange('student')}
-                            style={{ padding: '4px 12px', fontSize: '12px' }}
                         >
                             Moje VM
                         </button>
                         <button 
                             className={`btn btn-sm ${currentView === 'teacher' ? 'btn-primary' : 'btn-secondary'}`}
                             onClick={() => onViewChange('teacher')}
-                            style={{ padding: '4px 12px', fontSize: '12px' }}
                         >
                             Učitelský Panel
                         </button>
@@ -56,18 +54,16 @@ export function Header({
                 )}
             </div>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                 {currentUser && (
                     <span className="user-badge" title="Přihlášená relace">
-                        <span className="user-badge-icon">&#9679;</span>
+                        <span className="user-badge-dot"></span>
                         {currentUser}
                     </span>
                 )}
                 {userRole && (
-                    <span 
-                        className={`status-badge ${userRole === 'teacher' ? 'status-running' : 'status-stopped'}`}
-                        style={{ fontSize: '11px', letterSpacing: '0.5px' }}
-                    >
+                    <span className={`status-badge ${userRole === 'teacher' ? 'status-running' : 'status-stopped'}`}>
+                        <span className="status-badge-dot"></span>
                         {userRole === 'teacher' ? 'UČITEL' : 'STUDENT'}
                     </span>
                 )}

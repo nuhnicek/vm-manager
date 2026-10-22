@@ -288,27 +288,27 @@ export function TeacherView({
                 </div>
             )}
 
-            <div style={{ display: 'flex', gap: '8px', marginBottom: '16px', borderBottom: '1px solid var(--border-color)', paddingBottom: '8px', flexWrap: 'wrap' }}>
+            <div className="nav-tabs">
                 <button 
-                    className={`btn btn-sm ${activeTab === 'labs' ? 'btn-primary' : 'btn-secondary'}`}
+                    className={`nav-tab-btn ${activeTab === 'labs' ? 'active' : ''}`}
                     onClick={() => setActiveTab('labs')}
                 >
                     Laboratoře a scénáře ({labTemplates.length})
                 </button>
                 <button 
-                    className={`btn btn-sm ${activeTab === 'templates' ? 'btn-primary' : 'btn-secondary'}`}
+                    className={`nav-tab-btn ${activeTab === 'templates' ? 'active' : ''}`}
                     onClick={() => setActiveTab('templates')}
                 >
                     Správce šablon ({templates.length})
                 </button>
                 <button 
-                    className={`btn btn-sm ${activeTab === 'fleet' ? 'btn-primary' : 'btn-secondary'}`}
+                    className={`nav-tab-btn ${activeTab === 'fleet' ? 'active' : ''}`}
                     onClick={() => setActiveTab('fleet')}
                 >
                     Cluster a uzly ({nodes.length})
                 </button>
                 <button 
-                    className={`btn btn-sm ${activeTab === 'students' ? 'btn-primary' : 'btn-secondary'}`}
+                    className={`nav-tab-btn ${activeTab === 'students' ? 'active' : ''}`}
                     onClick={() => setActiveTab('students')}
                 >
                     Třída a studenti ({students.length})
@@ -342,15 +342,12 @@ export function TeacherView({
                             </div>
                         </div>
 
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(360px, 1fr))', gap: '16px' }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: '14px' }}>
                             {labTemplates.map(lab => (
                                 <div 
                                     key={lab.id}
+                                    className="node-card"
                                     style={{
-                                        padding: '16px',
-                                        borderRadius: '8px',
-                                        border: '1px solid var(--border-color)',
-                                        backgroundColor: 'var(--card-bg-subtle)',
                                         display: 'flex',
                                         flexDirection: 'column',
                                         justifyContent: 'space-between'
@@ -358,20 +355,17 @@ export function TeacherView({
                                 >
                                     <div>
                                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
-                                            <strong style={{ fontSize: '16px', color: 'var(--text-main)' }}>{lab.name}</strong>
-                                            <span 
-                                                className="status-badge status-running"
-                                                style={{ fontSize: '11px', textTransform: 'uppercase' }}
-                                            >
+                                            <strong style={{ fontSize: '15px', color: 'var(--text-main)' }}>{lab.name}</strong>
+                                            <span className="mono-tag" style={{ textTransform: 'uppercase', color: 'var(--warning-text)' }}>
                                                 {lab.difficulty}
                                             </span>
                                         </div>
 
-                                        <div style={{ fontSize: '12px', color: 'var(--primary-color)', fontWeight: 600, marginBottom: '8px' }}>
+                                        <div style={{ fontSize: '11px', color: 'var(--primary-color)', fontWeight: 600, marginBottom: '8px' }}>
                                             {lab.category}
                                         </div>
 
-                                        <p style={{ fontSize: '13px', color: 'var(--text-muted)', margin: '0 0 12px 0', lineHeight: 1.4 }}>
+                                        <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: '0 0 12px 0', lineHeight: 1.4 }}>
                                             {lab.description}
                                         </p>
 
@@ -379,19 +373,9 @@ export function TeacherView({
                                             <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '4px' }}>
                                                 Stroje v topologii ({lab.vms?.length || 0}):
                                             </div>
-                                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
                                                 {lab.vms?.map((vm, i) => (
-                                                    <span 
-                                                        key={i}
-                                                        style={{ 
-                                                            fontSize: '11px', 
-                                                            background: 'var(--primary-subtle)', 
-                                                            color: 'var(--primary-color)', 
-                                                            padding: '2px 8px', 
-                                                            borderRadius: '4px',
-                                                            fontFamily: 'monospace' 
-                                                        }}
-                                                    >
+                                                    <span key={i} className="mono-tag" style={{ color: 'var(--primary-color)' }}>
                                                         {vm.name}
                                                     </span>
                                                 ))}
@@ -405,16 +389,7 @@ export function TeacherView({
                                                 </div>
                                                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
                                                     {lab.networks.map((net, i) => (
-                                                        <span 
-                                                            key={i}
-                                                            style={{ 
-                                                                fontSize: '10px', 
-                                                                background: 'var(--badge-bg)', 
-                                                                color: 'var(--text-main)', 
-                                                                padding: '2px 6px', 
-                                                                borderRadius: '4px' 
-                                                            }}
-                                                        >
+                                                        <span key={i} className="mono-tag">
                                                             {net.label || `${net.from_vm} <-> ${net.to_vm}`}
                                                         </span>
                                                     ))}
@@ -423,7 +398,7 @@ export function TeacherView({
                                         )}
                                     </div>
 
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '12px', borderTop: '1px solid var(--border-color)', paddingTop: '10px' }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '12px', borderTop: '1px solid var(--border-subtle)', paddingTop: '10px' }}>
                                         <button 
                                             className="btn btn-primary btn-sm"
                                             onClick={() => setDeployingLab(lab)}
@@ -431,9 +406,8 @@ export function TeacherView({
                                             Nasadit scénář
                                         </button>
                                         <button 
-                                            className="btn btn-secondary btn-sm"
+                                            className="btn btn-danger btn-sm"
                                             onClick={() => handleDeleteTemplate(lab.id)}
-                                            style={{ color: 'var(--danger-color)' }}
                                         >
                                             Smazat
                                         </button>
@@ -451,7 +425,8 @@ export function TeacherView({
 
                     <div className="card">
                         <h3 style={{ margin: '0 0 12px 0' }}>Aktivní nasazené laboratoře ({labInstances.length})</h3>
-                        <table className="vm-table">
+                        <div className="table-container">
+                            <table className="vm-table">
                             <thead>
                                 <tr>
                                     <th>Název laboratoře</th>
@@ -531,6 +506,7 @@ export function TeacherView({
                                 )}
                             </tbody>
                         </table>
+                        </div>
                     </div>
                 </div>
             )}

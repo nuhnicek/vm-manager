@@ -233,25 +233,20 @@ export function TemplatesManager({ templates, vms, nodes, token, onRefresh, onMe
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '12px' }}>
                 {templates.map(tpl => (
-                    <div 
-                        key={tpl.id}
-                        style={{
-                            padding: '14px',
-                            borderRadius: '8px',
-                            border: '1px solid var(--border-color)',
-                            backgroundColor: 'var(--card-bg-subtle)'
-                        }}
-                    >
+                    <div key={tpl.id} className="node-card">
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                            <strong style={{ fontSize: '15px' }}>{tpl.name}</strong>
-                            <span style={{ fontFamily: 'monospace', fontSize: '12px', padding: '2px 6px', background: 'var(--badge-bg)', borderRadius: '4px' }}>
+                            <strong style={{ fontSize: '14px' }}>{tpl.name}</strong>
+                            <span className="mono-tag" style={{ color: 'var(--primary-color)' }}>
                                 VMID: {tpl.id}
                             </span>
                         </div>
                         <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
-                            <div>UUID: {tpl.uuid || `tpl-${tpl.id}`}</div>
-                            <div style={{ marginTop: '4px' }}>
-                                Stav: <span className="status-badge status-running" style={{ fontSize: '10px' }}>Šablona připravena</span>
+                            <div>UUID: <span className="mono-tag">{tpl.uuid || `tpl-${tpl.id}`}</span></div>
+                            <div style={{ marginTop: '6px' }}>
+                                <span className="status-badge status-running">
+                                    <span className="status-badge-dot"></span>
+                                    Šablona připravena
+                                </span>
                             </div>
                         </div>
                     </div>

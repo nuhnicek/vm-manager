@@ -535,7 +535,7 @@ function App() {
 
     if (launchedConsoleVM) {
         return (
-            <div style={{ height: '100vh', width: '100vw', backgroundColor: '#0a0f1d', margin: 0, padding: 0 }}>
+            <div style={{ height: '100vh', width: '100vw', backgroundColor: 'var(--bg-color)', margin: 0, padding: 0 }}>
                 <VMConsole 
                     vmId={launchedConsoleParams?.id || launchedConsoleVM}
                     vmName={launchedConsoleParams?.name || launchedConsoleVM}

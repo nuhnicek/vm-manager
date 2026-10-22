@@ -43,7 +43,7 @@ export function VMTable({
                     {isRefreshing ? 'Obnovování...' : 'Obnovit'}
                 </button>
             </div>
-            <div style={{ overflowX: 'auto' }}>
+            <div className="table-container">
                 <table className="vm-table">
                     <thead>
                         <tr>
@@ -62,10 +62,14 @@ export function VMTable({
 
                             return (
                                 <tr key={vm.id}>
-                                    <td style={{ fontFamily: 'monospace', fontWeight: 700, color: 'var(--primary-color)' }}>{vm.id}</td>
+                                    <td>
+                                        <span className="mono-tag" style={{ fontWeight: 600, color: 'var(--primary-color)' }}>
+                                            {vm.id}
+                                        </span>
+                                    </td>
                                     <td className="fw-500">{vm.name}</td>
                                     <td>
-                                        <span style={{ fontFamily: 'monospace', fontSize: '11px', padding: '3px 8px', background: 'var(--card-bg-subtle)', border: '1px solid var(--border-color)', borderRadius: '6px' }}>
+                                        <span className="mono-tag">
                                             {(vm as any).node || 'pve'}
                                         </span>
                                     </td>
@@ -76,14 +80,7 @@ export function VMTable({
                                     )}
                                     <td>
                                         <span className={`status-badge ${isRunning ? 'status-running' : 'status-stopped'}`}>
-                                            <span style={{ 
-                                                width: '6px', 
-                                                height: '6px', 
-                                                borderRadius: '50%', 
-                                                backgroundColor: isRunning ? 'var(--success-color)' : 'var(--danger-color)',
-                                                marginRight: '6px',
-                                                display: 'inline-block' 
-                                            }}></span>
+                                            <span className="status-badge-dot"></span>
                                             {isRunning ? 'BĚŽÍ' : 'ZASTAVENO'}
                                         </span>
                                     </td>

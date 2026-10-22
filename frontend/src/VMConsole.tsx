@@ -237,41 +237,32 @@ export function VMConsole({ vmId, vmName, token, onClose, onPopOut }: VMConsoleP
             flexDirection: 'column'
         }}>
             <div style={{
-                backgroundColor: '#1e293b',
-                color: '#f8fafc',
+                backgroundColor: 'var(--card-bg)',
+                color: 'var(--text-main)',
                 padding: '8px 16px',
                 display: 'flex',
                 justifyContent: 'space-between',
                 alignItems: 'center',
-                borderBottom: '1px solid #334155',
+                borderBottom: '1px solid var(--border-color)',
                 userSelect: 'none'
             }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <div style={{ fontWeight: 600, fontSize: '14px', letterSpacing: '0.02em' }}>
-                        {vmName} <span style={{ opacity: 0.6, fontSize: '12px' }}>({vmId ? `VMID: ${vmId}` : 'Konzole'})</span>
+                    <div style={{ fontWeight: 600, fontSize: '13px', letterSpacing: '-0.01em' }}>
+                        {vmName} <span className="mono-tag" style={{ marginLeft: '6px' }}>{vmId ? `VMID: ${vmId}` : 'Konzole'}</span>
                     </div>
 
                     <div style={{
                         display: 'flex',
-                        backgroundColor: '#0f172a',
+                        backgroundColor: 'var(--card-bg-subtle)',
                         borderRadius: '6px',
                         padding: '2px',
-                        border: '1px solid #334155'
+                        border: '1px solid var(--border-color)'
                     }}>
                         <button
                             type="button"
                             onClick={() => setConsoleMode('vnc')}
-                            style={{
-                                padding: '4px 10px',
-                                fontSize: '12px',
-                                fontWeight: 600,
-                                borderRadius: '4px',
-                                border: 'none',
-                                cursor: 'pointer',
-                                backgroundColor: consoleMode === 'vnc' ? '#2563eb' : 'transparent',
-                                color: consoleMode === 'vnc' ? '#ffffff' : '#94a3b8',
-                                transition: 'all 0.15s ease'
-                            }}
+                            className={`btn btn-sm ${consoleMode === 'vnc' ? 'btn-primary' : 'btn-secondary'}`}
+                            style={{ border: 'none' }}
                             title="Grafická obrazovka (vhodné pro EVE-NG, Windows a další systémy)"
                         >
                             Obrazovka (VNC)
@@ -279,48 +270,30 @@ export function VMConsole({ vmId, vmName, token, onClose, onPopOut }: VMConsoleP
                         <button
                             type="button"
                             onClick={() => setConsoleMode('serial')}
-                            style={{
-                                padding: '4px 10px',
-                                fontSize: '12px',
-                                fontWeight: 600,
-                                borderRadius: '4px',
-                                border: 'none',
-                                cursor: 'pointer',
-                                backgroundColor: consoleMode === 'serial' ? '#2563eb' : 'transparent',
-                                color: consoleMode === 'serial' ? '#ffffff' : '#94a3b8',
-                                transition: 'all 0.15s ease'
-                            }}
+                            className={`btn btn-sm ${consoleMode === 'serial' ? 'btn-primary' : 'btn-secondary'}`}
+                            style={{ border: 'none' }}
                             title="Textový sériový terminál (pro Linux getty)"
                         >
                             Sériový terminál
                         </button>
                     </div>
 
-                    <div style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '6px',
-                        fontSize: '11px',
-                        backgroundColor: '#0f172a',
-                        padding: '3px 8px',
-                        borderRadius: '12px',
-                        border: '1px solid #334155'
+                    <div className="status-badge" style={{
+                        backgroundColor: 'var(--card-bg-subtle)',
+                        border: '1px solid var(--border-color)'
                     }}>
-                        <span style={{
-                            width: '8px',
-                            height: '8px',
-                            borderRadius: '50%',
+                        <span className="status-badge-dot" style={{
                             backgroundColor:
-                                status === 'connected' ? '#22c55e' :
-                                status === 'connecting' ? '#eab308' :
-                                '#ef4444'
+                                status === 'connected' ? 'var(--success-text)' :
+                                status === 'connecting' ? 'var(--warning-text)' :
+                                'var(--danger-text)'
                         }} />
                         <span style={{ textTransform: 'capitalize' }}>
                             {status === 'connected' ? 'Připojeno' : status === 'connecting' ? 'Připojování...' : status === 'disconnected' ? 'Odpojeno' : 'Chyba'}
                         </span>
                     </div>
 
-                    <span style={{ fontSize: '11px', color: '#94a3b8' }}>
+                    <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
                         {statusMessage}
                     </span>
                 </div>
@@ -329,15 +302,7 @@ export function VMConsole({ vmId, vmName, token, onClose, onPopOut }: VMConsoleP
                     <button
                         type="button"
                         onClick={() => setConnectAttempt(prev => prev + 1)}
-                        style={{
-                            padding: '4px 10px',
-                            fontSize: '12px',
-                            backgroundColor: '#334155',
-                            color: '#f8fafc',
-                            border: '1px solid #475569',
-                            borderRadius: '4px',
-                            cursor: 'pointer'
-                        }}
+                        className="btn btn-secondary btn-sm"
                         title="Znovu připojit ke konzoli"
                     >
                         Znovu připojit
@@ -347,16 +312,7 @@ export function VMConsole({ vmId, vmName, token, onClose, onPopOut }: VMConsoleP
                         <button
                             type="button"
                             onClick={onPopOut}
-                            style={{
-                                padding: '4px 10px',
-                                fontSize: '12px',
-                                backgroundColor: '#0284c7',
-                                color: '#ffffff',
-                                border: 'none',
-                                borderRadius: '4px',
-                                cursor: 'pointer',
-                                fontWeight: 500
-                            }}
+                            className="btn btn-primary btn-sm"
                             title="Otevřít v samostatném okně"
                         >
                             Samostatné okno
@@ -366,19 +322,10 @@ export function VMConsole({ vmId, vmName, token, onClose, onPopOut }: VMConsoleP
                     <button
                         type="button"
                         onClick={onClose}
-                        style={{
-                            padding: '4px 12px',
-                            fontSize: '14px',
-                            backgroundColor: '#ef4444',
-                            color: '#ffffff',
-                            border: 'none',
-                            borderRadius: '4px',
-                            cursor: 'pointer',
-                            fontWeight: 'bold'
-                        }}
+                        className="btn btn-danger btn-sm"
                         title="Zavřít konzoli"
                     >
-                        X
+                        Zavřít (&times;)
                     </button>
                 </div>
             </div>

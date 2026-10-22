@@ -153,43 +153,48 @@ export function StudentsManager({ token, onMessage }: StudentsManagerProps) {
                 </div>
             )}
 
-            <table className="vm-table">
-                <thead>
-                    <tr>
-                        <th>E-mail / Student</th>
-                        <th>UUID</th>
-                        <th>Role</th>
-                        <th>Přiřazené VM</th>
-                        <th>Běží</th>
-                        <th>Aktivní laboratoře</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {students.map(st => (
-                        <tr key={st.uuid || st.email}>
-                            <td className="fw-500">{st.email}</td>
-                            <td style={{ fontFamily: 'monospace', fontSize: '11px', color: 'var(--text-muted)' }}>
-                                {st.uuid ? st.uuid.slice(0, 8) + '...' : '-'}
-                            </td>
-                            <td>
-                                <span className={`status-badge ${st.role === 'teacher' ? 'status-running' : 'status-stopped'}`}>
-                                    {st.role === 'teacher' ? 'Učitel' : 'Student'}
-                                </span>
-                            </td>
-                            <td><strong>{st.vm_count || 0}</strong> VM</td>
-                            <td>{st.running_vms || 0} běží</td>
-                            <td>{st.lab_count || 0} laboratoří</td>
-                        </tr>
-                    ))}
-                    {students.length === 0 && (
+            <div className="table-container">
+                <table className="vm-table">
+                    <thead>
                         <tr>
-                            <td colSpan={6} className="text-center text-muted" style={{ padding: '24px' }}>
-                                Nebyly nalezeny žádné studentské účty.
-                            </td>
+                            <th>E-mail / Student</th>
+                            <th>UUID</th>
+                            <th>Role</th>
+                            <th>Přiřazené VM</th>
+                            <th>Běží</th>
+                            <th>Aktivní laboratoře</th>
                         </tr>
-                    )}
-                </tbody>
-            </table>
+                    </thead>
+                    <tbody>
+                        {students.map(st => (
+                            <tr key={st.uuid || st.email}>
+                                <td className="fw-500">{st.email}</td>
+                                <td>
+                                    <span className="mono-tag" style={{ color: 'var(--text-muted)' }}>
+                                        {st.uuid ? st.uuid.slice(0, 8) + '...' : '-'}
+                                    </span>
+                                </td>
+                                <td>
+                                    <span className={`status-badge ${st.role === 'teacher' ? 'status-running' : 'status-stopped'}`}>
+                                        <span className="status-badge-dot"></span>
+                                        {st.role === 'teacher' ? 'Učitel' : 'Student'}
+                                    </span>
+                                </td>
+                                <td><strong>{st.vm_count || 0}</strong> VM</td>
+                                <td>{st.running_vms || 0} běží</td>
+                                <td>{st.lab_count || 0} laboratoří</td>
+                            </tr>
+                        ))}
+                        {students.length === 0 && (
+                            <tr>
+                                <td colSpan={6} className="text-center text-muted" style={{ padding: '24px' }}>
+                                    Nebyly nalezeny žádné studentské účty.
+                                </td>
+                            </tr>
+                        )}
+                    </tbody>
+                </table>
+            </div>
         </div>
     );
 }

@@ -79,7 +79,7 @@ export function Login({ onLoginSuccess }: LoginProps) {
         <div className="login-container">
             <div className="card login-card">
                 <div className="login-header">
-                    <div style={{ display: 'inline-flex', padding: '12px', background: 'var(--primary-subtle)', borderRadius: '12px', marginBottom: '12px', color: 'var(--primary-color)' }}>
+                    <div style={{ display: 'inline-flex', padding: '10px', background: 'var(--card-bg-subtle)', borderRadius: '6px', border: '1px solid var(--border-color)', marginBottom: '12px', color: 'var(--primary-color)' }}>
                         <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                             <rect x="2" y="2" width="20" height="8" rx="2" ry="2"></rect>
                             <rect x="2" y="14" width="20" height="8" rx="2" ry="2"></rect>
