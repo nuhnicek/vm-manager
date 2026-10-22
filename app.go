@@ -109,7 +109,7 @@ func NewApp() *App {
 
 	backendURL := os.Getenv("BACKEND_URL")
 	if backendURL == "" {
-		backendURL = "http://localhost:8080"
+		backendURL = "http://10.0.10.52:8080"
 	}
 
 	return &App{
