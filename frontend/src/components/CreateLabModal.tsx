@@ -182,8 +182,8 @@ export function CreateLabModal({ isOpen, onClose, templates, token, onLabCreated
     return (
         <div className="modal-backdrop" onClick={onClose}>
             <div 
-                className="modal" 
-                style={{ maxWidth: '840px', width: '95%', maxHeight: '90vh', overflowY: 'auto' }}
+                className="modal modal-lg" 
+                style={{ maxWidth: '920px', width: '95%', maxHeight: '90vh', overflowY: 'auto' }}
                 onClick={e => e.stopPropagation()}
             >
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>

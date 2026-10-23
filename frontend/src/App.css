@@ -483,6 +483,16 @@ select option:disabled {
   overflow-y: auto;
 }
 
+.modal-lg,
+.modal-content.modal-lg {
+  max-width: 900px !important;
+}
+
+.modal-xl,
+.modal-content.modal-xl {
+  max-width: 1120px !important;
+}
+
 .modal h3,
 .modal-content h3,
 .modal h4,
@@ -622,24 +632,27 @@ select option:disabled {
 
 .nav-tabs {
   display: flex;
-  gap: 6px;
-  margin-bottom: 16px;
+  gap: 8px;
+  margin-bottom: 20px;
   border-bottom: 1px solid var(--border-color);
-  padding-bottom: 8px;
+  padding-bottom: 10px;
   flex-wrap: wrap;
 }
 
 .nav-tab-btn {
-  height: 30px;
-  padding: 0 12px;
-  font-size: 12px;
+  height: 32px;
+  padding: 0 14px;
+  font-size: 13px;
   font-weight: 500;
   border-radius: 6px;
   border: 1px solid transparent;
   background: transparent;
   color: var(--text-muted);
   cursor: pointer;
-  transition: all 0.12s ease;
+  transition: all 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .nav-tab-btn:hover {
@@ -648,10 +661,56 @@ select option:disabled {
 }
 
 .nav-tab-btn.active {
-  color: var(--text-main);
-  background: var(--card-bg-subtle);
-  border-color: var(--border-color);
+  color: #ffffff;
+  background: var(--primary-color);
+  border-color: var(--primary-color);
   font-weight: 600;
+}
+
+.stats-banner {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.stat-box {
+  background: var(--card-bg-subtle);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+}
+
+.stat-box-label {
+  font-size: 11px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  margin-bottom: 4px;
+}
+
+.stat-box-val {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text-main);
+  line-height: 1.2;
+}
+
+.filter-bar {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+
+.search-input {
+  max-width: 280px;
+  height: 32px;
+  font-size: 12px;
 }
 
 .mermaid-container {

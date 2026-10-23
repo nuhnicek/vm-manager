@@ -637,6 +637,10 @@ function App() {
                     onRefreshNodes={fetchNodes}
                     onRefreshVMs={fetchVMs}
                     onMessage={setMessage}
+                    onStartVM={handleStartVM}
+                    onStopVM={handleStopVM}
+                    onDeleteVM={handleDeleteVM}
+                    onOpenConsole={handleOpenConsole}
                 />
             ) : (
                 <>
