@@ -14,6 +14,7 @@ export default defineConfig(({ mode }) => {
       exclude: ['@novnc/novnc']
     },
     server: {
+      host: '0.0.0.0',
       proxy: {
         '/auth': backendTarget,
         '/ping': backendTarget,
