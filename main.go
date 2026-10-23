@@ -15,19 +15,25 @@ func main() {
 	app := NewApp()
 
 	title := "lab411-vm-manager"
-	width := 1024
-	height := 768
+	width := 1200
+	height := 800
+	minWidth := 1024
+	minHeight := 650
 
 	if app.consoleModeVM != "" {
 		title = "Console - " + app.consoleModeVM
 		width = 800
 		height = 600
+		minWidth = 600
+		minHeight = 400
 	}
 
 	err := wails.Run(&options.App{
-		Title:  title,
-		Width:  width,
-		Height: height,
+		Title:     title,
+		Width:     width,
+		Height:    height,
+		MinWidth:  minWidth,
+		MinHeight: minHeight,
 		AssetServer: &assetserver.Options{
 			Assets: assets,
 		},

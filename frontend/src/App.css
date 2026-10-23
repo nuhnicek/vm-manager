@@ -153,12 +153,16 @@ body {
   align-items: flex-end;
 }
 
-.form-group {
-  display: flex;
-  flex-direction: column;
+.create-form .form-group {
   flex: 1 1 200px;
   min-width: 160px;
   margin-bottom: 0;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 14px;
 }
 
 .form-group label {
@@ -221,6 +225,10 @@ select {
   background-size: 12px;
   cursor: pointer;
   line-height: 1.4;
+}
+
+select::-ms-expand {
+  display: none;
 }
 
 [data-theme='dark'] select {
@@ -538,6 +546,11 @@ select option:disabled {
   gap: 16px;
 }
 
+.login-form .form-group {
+  margin-bottom: 0;
+  flex: none;
+}
+
 .login-btn {
   width: 100%;
   height: 36px;
@@ -666,20 +679,20 @@ select option:disabled {
   text-align: center;
 }
 
-[data-theme='dark'] ::-webkit-scrollbar {
+::-webkit-scrollbar {
   width: 8px;
   height: 8px;
 }
 
-[data-theme='dark'] ::-webkit-scrollbar-track {
-  background: #141414;
+::-webkit-scrollbar-track {
+  background: var(--card-bg-subtle);
 }
 
-[data-theme='dark'] ::-webkit-scrollbar-thumb {
-  background: #333333;
+::-webkit-scrollbar-thumb {
+  background: var(--border-color);
   border-radius: 4px;
 }
 
-[data-theme='dark'] ::-webkit-scrollbar-thumb:hover {
-  background: #444444;
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
 }
