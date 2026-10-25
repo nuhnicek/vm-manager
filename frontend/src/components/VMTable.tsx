@@ -21,6 +21,7 @@ interface VMTableProps {
     onDeleteProjectClick?: (project: Project) => void;
     onManageProjectVMsClick?: (project: Project) => void;
     onAssignVMProject?: (vmId: number, projectId: string) => Promise<void>;
+    onCreateVMClick?: () => void;
 }
 
 export function VMTable({
@@ -41,6 +42,7 @@ export function VMTable({
     onDeleteProjectClick,
     onManageProjectVMsClick,
     onAssignVMProject,
+    onCreateVMClick,
 }: VMTableProps) {
     const isTeacher = userRole === 'teacher';
     const [searchQuery, setSearchQuery] = useState('');
@@ -125,7 +127,17 @@ export function VMTable({
             return (
                 <tr>
                     <td colSpan={isTeacher ? 8 : 6} className="text-center text-muted" style={{ padding: '24px' }}>
-                        Nebyly nalezeny žádné virtuální stroje pro toto zobrazení.
+                        <div>Nebyly nalezeny žádné virtuální stroje pro toto zobrazení.</div>
+                        {onCreateVMClick && (
+                            <button
+                                type="button"
+                                className="btn btn-primary btn-sm"
+                                style={{ marginTop: '10px' }}
+                                onClick={onCreateVMClick}
+                            >
+                                + Vytvořit nový virtuální stroj
+                            </button>
+                        )}
                     </td>
                 </tr>
             );
@@ -281,6 +293,16 @@ export function VMTable({
                     </p>
                 </div>
                 <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                    {onCreateVMClick && (
+                        <button 
+                            type="button"
+                            className="btn btn-primary btn-sm"
+                            onClick={onCreateVMClick}
+                            title="Vytvořit nový virtuální stroj"
+                        >
+                            + Vytvořit VM
+                        </button>
+                    )}
                     <button 
                         type="button"
                         className={`btn btn-sm ${isGroupedView ? 'btn-primary' : 'btn-secondary'}`}

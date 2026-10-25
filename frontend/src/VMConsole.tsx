@@ -40,7 +40,11 @@ export function VMConsole({ vmId, vmName, vmNode, token, onClose, onPopOut }: VM
     const [status, setStatus] = useState<'connecting' | 'connected' | 'disconnected' | 'error'>('connecting');
     const [statusMessage, setStatusMessage] = useState<string>('Inicializace konzole...');
     const [connectAttempt, setConnectAttempt] = useState(0);
+    const [performanceMode, setPerformanceMode] = useState<'low-latency' | 'balanced' | 'bandwidth'>('low-latency');
+    const [scaleMode, setScaleMode] = useState<'fit' | '1:1'>('fit');
+    const [showDotCursor, setShowDotCursor] = useState(true);
 
+    const rfbRef = useRef<any>(null);
     const vncContainerRef = useRef<HTMLDivElement>(null);
     const terminalRef = useRef<HTMLDivElement>(null);
 
@@ -70,10 +74,23 @@ export function VMConsole({ vmId, vmName, vmNode, token, onClose, onPopOut }: VM
                 rfb = new RFB(vncContainerRef.current, vncUrl, {
                     wsProtocols: ['binary'],
                 });
+                rfbRef.current = rfb;
 
-                rfb.scaleViewport = true;
+                rfb.scaleViewport = scaleMode === 'fit';
                 rfb.resizeSession = false;
-                rfb.clipViewport = true;
+                rfb.clipViewport = false;
+                rfb.showDotCursor = showDotCursor;
+
+                if (performanceMode === 'low-latency') {
+                    rfb.compressionLevel = 0;
+                    rfb.qualityLevel = 8;
+                } else if (performanceMode === 'balanced') {
+                    rfb.compressionLevel = 2;
+                    rfb.qualityLevel = 6;
+                } else {
+                    rfb.compressionLevel = 6;
+                    rfb.qualityLevel = 4;
+                }
 
                 rfb.addEventListener('connect', () => {
                     if (isDisposed) return;
@@ -111,16 +128,64 @@ export function VMConsole({ vmId, vmName, vmNode, token, onClose, onPopOut }: VM
 
         return () => {
             isDisposed = true;
-            if (rfb) {
+            if (rfbRef.current) {
                 try {
-                    rfb.disconnect();
+                    rfbRef.current.disconnect();
                 } catch {}
+                rfbRef.current = null;
             }
             if (vncContainerRef.current) {
                 vncContainerRef.current.innerHTML = '';
             }
         };
     }, [consoleMode, vmId, vmName, vmNode, token, connectAttempt]);
+
+    const handlePerformanceModeChange = (mode: 'low-latency' | 'balanced' | 'bandwidth') => {
+        setPerformanceMode(mode);
+        if (rfbRef.current) {
+            if (mode === 'low-latency') {
+                rfbRef.current.compressionLevel = 0;
+                rfbRef.current.qualityLevel = 8;
+            } else if (mode === 'balanced') {
+                rfbRef.current.compressionLevel = 2;
+                rfbRef.current.qualityLevel = 6;
+            } else {
+                rfbRef.current.compressionLevel = 6;
+                rfbRef.current.qualityLevel = 4;
+            }
+        }
+    };
+
+    const handleScaleModeChange = (mode: 'fit' | '1:1') => {
+        setScaleMode(mode);
+        if (rfbRef.current) {
+            rfbRef.current.scaleViewport = mode === 'fit';
+        }
+    };
+
+    const handleToggleDotCursor = () => {
+        setShowDotCursor(prev => {
+            const next = !prev;
+            if (rfbRef.current) {
+                rfbRef.current.showDotCursor = next;
+            }
+            return next;
+        });
+    };
+
+    const sendCtrlAltDel = () => {
+        if (rfbRef.current) {
+            rfbRef.current.sendCtrlAltDel();
+            rfbRef.current.focus?.();
+        }
+    };
+
+    const sendKey = (keysym: number, code: string) => {
+        if (rfbRef.current) {
+            rfbRef.current.sendKey(keysym, code);
+            rfbRef.current.focus?.();
+        }
+    };
 
     useEffect(() => {
         if (consoleMode !== 'serial' || !terminalRef.current) return;
@@ -335,10 +400,163 @@ export function VMConsole({ vmId, vmName, vmNode, token, onClose, onPopOut }: VM
                 </div>
             </div>
 
+            {consoleMode === 'vnc' && (
+                <div style={{
+                    backgroundColor: 'var(--card-bg-subtle)',
+                    borderBottom: '1px solid var(--border-color)',
+                    padding: '5px 16px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    flexWrap: 'wrap',
+                    gap: '8px',
+                    userSelect: 'none',
+                    fontSize: '11px'
+                }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                        <span style={{ color: 'var(--text-muted)', fontWeight: 600 }}>REŽIM VÝKONU:</span>
+                        <div style={{
+                            display: 'inline-flex',
+                            backgroundColor: 'var(--card-bg)',
+                            borderRadius: '5px',
+                            border: '1px solid var(--border-color)',
+                            padding: '2px',
+                            gap: '2px'
+                        }}>
+                            <button
+                                type="button"
+                                onClick={() => handlePerformanceModeChange('low-latency')}
+                                className={`btn btn-sm ${performanceMode === 'low-latency' ? 'btn-primary' : 'btn-secondary'}`}
+                                style={{ fontSize: '11px', padding: '2px 8px', border: 'none' }}
+                                title="Nízká latence a minimální komprese pro plynulý obraz na rychlé síti"
+                            >
+                                Nízká latence
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => handlePerformanceModeChange('balanced')}
+                                className={`btn btn-sm ${performanceMode === 'balanced' ? 'btn-primary' : 'btn-secondary'}`}
+                                style={{ fontSize: '11px', padding: '2px 8px', border: 'none' }}
+                                title="Vyvážený poměr odezvy a spotřeby přenosu"
+                            >
+                                Vyvážený
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => handlePerformanceModeChange('bandwidth')}
+                                className={`btn btn-sm ${performanceMode === 'bandwidth' ? 'btn-primary' : 'btn-secondary'}`}
+                                style={{ fontSize: '11px', padding: '2px 8px', border: 'none' }}
+                                title="Vysoká komprese šetřící přenosová data"
+                            >
+                                Úsporný
+                            </button>
+                        </div>
+
+                        <div style={{ width: '1px', height: '16px', backgroundColor: 'var(--border-color)', margin: '0 4px' }} />
+
+                        <span style={{ color: 'var(--text-muted)', fontWeight: 600 }}>MĚŘÍTKO:</span>
+                        <div style={{
+                            display: 'inline-flex',
+                            backgroundColor: 'var(--card-bg)',
+                            borderRadius: '5px',
+                            border: '1px solid var(--border-color)',
+                            padding: '2px',
+                            gap: '2px'
+                        }}>
+                            <button
+                                type="button"
+                                onClick={() => handleScaleModeChange('fit')}
+                                className={`btn btn-sm ${scaleMode === 'fit' ? 'btn-primary' : 'btn-secondary'}`}
+                                style={{ fontSize: '11px', padding: '2px 8px', border: 'none' }}
+                                title="Přizpůsobit okno velikosti obrazovky"
+                            >
+                                Přizpůsobit
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => handleScaleModeChange('1:1')}
+                                className={`btn btn-sm ${scaleMode === '1:1' ? 'btn-primary' : 'btn-secondary'}`}
+                                style={{ fontSize: '11px', padding: '2px 8px', border: 'none' }}
+                                title="Původní 1:1 rozlišení bez softwarového škálování"
+                            >
+                                1:1
+                            </button>
+                        </div>
+
+                        <div style={{ width: '1px', height: '16px', backgroundColor: 'var(--border-color)', margin: '0 4px' }} />
+
+                        <button
+                            type="button"
+                            onClick={handleToggleDotCursor}
+                            className={`btn btn-sm ${showDotCursor ? 'btn-primary' : 'btn-secondary'}`}
+                            style={{ fontSize: '11px', padding: '2px 10px' }}
+                            title="Zapnout nebo vypnout okamžitý lokální bod kurzoru myši"
+                        >
+                            {showDotCursor ? 'Lokální kurzor: Zapnuto' : 'Lokální kurzor: Vypnuto'}
+                        </button>
+                    </div>
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                        <span style={{ color: 'var(--text-muted)', fontWeight: 600 }}>KLÁVESY:</span>
+                        <button
+                            type="button"
+                            onClick={sendCtrlAltDel}
+                            className="btn btn-secondary btn-sm"
+                            style={{ fontSize: '11px', padding: '2px 8px' }}
+                            title="Odeslat Ctrl+Alt+Del do virtuálního stroje"
+                        >
+                            Ctrl+Alt+Del
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => sendKey(0xFF1B, 'Escape')}
+                            className="btn btn-secondary btn-sm"
+                            style={{ fontSize: '11px', padding: '2px 8px' }}
+                            title="Odeslat klávesu Escape"
+                        >
+                            Esc
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => sendKey(0xFF09, 'Tab')}
+                            className="btn btn-secondary btn-sm"
+                            style={{ fontSize: '11px', padding: '2px 8px' }}
+                            title="Odeslat klávesu Tab"
+                        >
+                            Tab
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => sendKey(0xFFEB, 'MetaLeft')}
+                            className="btn btn-secondary btn-sm"
+                            style={{ fontSize: '11px', padding: '2px 8px' }}
+                            title="Odeslat klávesu Windows / Super"
+                        >
+                            Win
+                        </button>
+                    </div>
+                </div>
+            )}
+
             <div style={{ flex: 1, position: 'relative', overflow: 'hidden', backgroundColor: '#000000' }}>
+                <style>{`
+                    .vnc-screen-viewport canvas {
+                        image-rendering: -webkit-optimize-contrast;
+                        image-rendering: crisp-edges;
+                        transform: translateZ(0);
+                        backface-visibility: hidden;
+                        will-change: transform;
+                    }
+                `}</style>
                 <div
                     ref={vncContainerRef}
+                    className="vnc-screen-viewport"
                     tabIndex={0}
+                    onClick={() => {
+                        if (rfbRef.current && rfbRef.current.focus) {
+                            rfbRef.current.focus();
+                        }
+                    }}
                     style={{
                         display: consoleMode === 'vnc' ? 'flex' : 'none',
                         width: '100%',
@@ -346,7 +564,7 @@ export function VMConsole({ vmId, vmName, vmNode, token, onClose, onPopOut }: VM
                         alignItems: 'center',
                         justifyContent: 'center',
                         outline: 'none',
-                        overflow: 'hidden'
+                        overflow: scaleMode === '1:1' ? 'auto' : 'hidden'
                     }}
                 />
 

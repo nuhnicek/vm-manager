@@ -19,6 +19,7 @@ export default defineConfig(({ mode }) => {
         '/auth': backendTarget,
         '/ping': backendTarget,
         '/nodes': backendTarget,
+        '/projects': backendTarget,
         '/vms': {
           target: backendTarget,
           ws: true
