@@ -68,6 +68,18 @@ export interface TeacherStudentInfo {
     lab_count: number;
 }
 
+export interface Project {
+    id: string;
+    name: string;
+    description?: string;
+    color?: string;
+    owner_uuid: string;
+    owner_email?: string;
+    vm_ids: number[];
+    created_at?: string;
+    updated_at?: string;
+}
+
 export interface FleetVM {
     id: number;
     uuid?: string;
@@ -80,6 +92,9 @@ export interface FleetVM {
     owner_email?: string;
     lab_id?: string;
     lab_name?: string;
+    project_id?: string;
+    project_name?: string;
+    project_color?: string;
     networks?: string[];
     available_nics?: string[];
 }

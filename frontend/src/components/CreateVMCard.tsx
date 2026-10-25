@@ -1,19 +1,37 @@
 import { useState, useEffect } from 'react';
 import { main } from '../../wailsjs/go/models';
-import { ProxmoxNode } from '../types';
+import { ProxmoxNode, Project } from '../types';
 
 interface CreateVMCardProps {
     templates: main.Template[];
     nodes?: ProxmoxNode[];
-    onCreateVM: (name: string, templateId: string, node?: string) => Promise<void>;
+    projects?: Project[];
+    selectedProjectId?: string;
+    onCreateVM: (name: string, templateId: string, node?: string, projectId?: string) => Promise<void>;
     userRole?: string;
 }
 
-export function CreateVMCard({ templates, nodes = [], onCreateVM, userRole }: CreateVMCardProps) {
+export function CreateVMCard({ 
+    templates, 
+    nodes = [], 
+    projects = [], 
+    selectedProjectId, 
+    onCreateVM, 
+    userRole 
+}: CreateVMCardProps) {
     const [name, setName] = useState('');
     const [selectedTemplateKey, setSelectedTemplateKey] = useState('');
     const [selectedNode, setSelectedNode] = useState('');
+    const [assignedProjectId, setAssignedProjectId] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
+
+    useEffect(() => {
+        if (selectedProjectId && selectedProjectId !== 'all' && selectedProjectId !== 'none') {
+            setAssignedProjectId(selectedProjectId);
+        } else {
+            setAssignedProjectId('');
+        }
+    }, [selectedProjectId]);
 
     useEffect(() => {
         if (templates.length > 0) {
@@ -57,7 +75,7 @@ export function CreateVMCard({ templates, nodes = [], onCreateVM, userRole }: Cr
                     tplNode = (found as any).node;
                 }
             }
-            await onCreateVM(name, tplId, tplNode);
+            await onCreateVM(name, tplId, tplNode, assignedProjectId || undefined);
             setName('');
         } finally {
             setIsSubmitting(false);
@@ -104,6 +122,23 @@ export function CreateVMCard({ templates, nodes = [], onCreateVM, userRole }: Cr
                         )}
                     </select>
                 </div>
+                {projects && projects.length > 0 && (
+                    <div className="form-group">
+                        <label>Projekt (volitelné):</label>
+                        <select 
+                            value={assignedProjectId}
+                            onChange={(e) => setAssignedProjectId(e.target.value)}
+                            disabled={isSubmitting}
+                        >
+                            <option value="">Bez projektu</option>
+                            {projects.map(p => (
+                                <option key={p.id} value={p.id}>
+                                    {p.name}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+                )}
                 {userRole === 'teacher' && nodes.length > 0 && (
                     <div className="form-group">
                         <label>Cílový uzel:</label>

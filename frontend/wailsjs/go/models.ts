@@ -82,6 +82,9 @@ export namespace main {
 	    ram_mb?: number;
 	    node?: string;
 	    owner?: string;
+	    project_id?: string;
+	    project_name?: string;
+	    project_color?: string;
 	    networks?: string[];
 	    available_nics?: string[];
 	    connections?: VMConnection[];
@@ -99,6 +102,9 @@ export namespace main {
 	        this.ram_mb = source["ram_mb"];
 	        this.node = source["node"];
 	        this.owner = source["owner"];
+	        this.project_id = source["project_id"];
+	        this.project_name = source["project_name"];
+	        this.project_color = source["project_color"];
 	        this.networks = source["networks"];
 	        this.available_nics = source["available_nics"];
 	        this.connections = this.convertValues(source["connections"], VMConnection);

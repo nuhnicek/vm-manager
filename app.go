@@ -46,6 +46,9 @@ type VM struct {
 	RAM           int            `json:"ram_mb,omitempty"`
 	Node          string         `json:"node,omitempty"`
 	Owner         string         `json:"owner,omitempty"`
+	ProjectID     string         `json:"project_id,omitempty"`
+	ProjectName   string         `json:"project_name,omitempty"`
+	ProjectColor  string         `json:"project_color,omitempty"`
 	Networks      []string       `json:"networks,omitempty"`
 	AvailableNICs []string       `json:"available_nics,omitempty"`
 	Connections   []VMConnection `json:"connections,omitempty"`

@@ -17,6 +17,9 @@ import { NetworkTopologyModal } from './components/NetworkTopologyModal';
 import { ConfirmModal } from './components/ConfirmModal';
 import { NodesCard, ProxmoxNode } from './components/NodesCard';
 import { TeacherView } from './components/TeacherView';
+import { Project } from './types';
+import { ProjectModal } from './components/ProjectModal';
+import { AssignProjectVMsModal } from './components/AssignProjectVMsModal';
 
 import './App.css';
 
@@ -40,6 +43,12 @@ function App() {
 
     const [vms, setVms] = useState<main.VM[]>([]);
     const [templates, setTemplates] = useState<main.Template[]>([]);
+    const [projects, setProjects] = useState<Project[]>([]);
+    const [selectedProjectId, setSelectedProjectId] = useState<string>('all');
+    const [isProjectModalOpen, setIsProjectModalOpen] = useState(false);
+    const [editingProject, setEditingProject] = useState<Project | null>(null);
+    const [managingVMsProject, setManagingVMsProject] = useState<Project | null>(null);
+
     const [isRefreshing, setIsRefreshing] = useState(false);
     const [message, setMessage] = useState('');
 
@@ -124,6 +133,7 @@ function App() {
                         }
                         await fetchVMs(savedToken);
                         await fetchTemplates(savedToken);
+                        await fetchProjects(savedToken);
                         if (savedRole === 'teacher') {
                             await fetchNodes(savedToken);
                         }
@@ -240,6 +250,29 @@ function App() {
         }
     };
 
+    const fetchProjects = async (tokenOverride?: string) => {
+        const token = tokenOverride || authToken || localStorage.getItem('vm_manager_token') || '';
+        if (!token) return;
+        try {
+            let resp: Response;
+            try {
+                resp = await fetch('/projects', {
+                    headers: { 'Authorization': token }
+                });
+            } catch {
+                resp = await fetch('http://10.0.10.52:8080/projects', {
+                    headers: { 'Authorization': token }
+                });
+            }
+            if (resp && resp.ok) {
+                const data = await resp.json();
+                setProjects(data || []);
+            }
+        } catch (err) {
+            console.error('Failed to fetch projects:', err);
+        }
+    };
+
     const handleLoginSuccess = async (token: string, userEmail: string, role?: string) => {
         localStorage.setItem('vm_manager_token', token);
         localStorage.setItem('vm_manager_email', userEmail);
@@ -255,6 +288,7 @@ function App() {
         setIsAuthenticated(true);
         await fetchVMs(token);
         await fetchTemplates(token);
+        await fetchProjects(token);
         if (role === 'teacher') {
             await fetchNodes(token);
         }
@@ -278,6 +312,8 @@ function App() {
         setMessage('');
         setVms([]);
         setTemplates([]);
+        setProjects([]);
+        setSelectedProjectId('all');
         setNodes([]);
         setSelectedNode('');
     };
@@ -312,6 +348,7 @@ function App() {
                 setMessage(`Akce byla úspěšně dokončena`);
             }
             await fetchVMs();
+            await fetchProjects();
         } catch (error: any) {
             setMessage(`Chyba: ${error?.message || error}`);
         }
@@ -370,7 +407,7 @@ function App() {
         }
     };
 
-    const handleCreateVM = async (name: string, templateId: string, node?: string) => {
+    const handleCreateVM = async (name: string, templateId: string, node?: string, projectId?: string) => {
         if (!name.trim()) {
             setMessage('Chyba: Název virtuálního stroje nesmí být prázdný');
             return;
@@ -389,6 +426,9 @@ function App() {
                 };
                 if (node) {
                     payload.node = node;
+                }
+                if (projectId) {
+                    payload.project_id = projectId;
                 }
                 let resp: Response;
                 try {
@@ -417,11 +457,140 @@ function App() {
             }
             setMessage(`Virtuální stroj ${name} byl úspěšně vytvořen`);
             await fetchVMs();
+            await fetchProjects();
             if (userRole === 'teacher') {
                 await fetchNodes();
             }
         } catch (error: any) {
             setMessage(`Chyba: ${error?.message || error}`);
+        }
+    };
+
+    const handleCreateOrUpdateProject = async (name: string, description: string, color: string) => {
+        const token = authToken || localStorage.getItem('vm_manager_token') || '';
+        const isEditing = editingProject !== null;
+        const endpoint = isEditing ? `/projects/${editingProject.id}` : '/projects';
+        const method = isEditing ? 'PUT' : 'POST';
+
+        let resp: Response;
+        try {
+            resp = await fetch(endpoint, {
+                method,
+                headers: { 'Content-Type': 'application/json', 'Authorization': token },
+                body: JSON.stringify({ name, description, color })
+            });
+        } catch {
+            resp = await fetch(`http://10.0.10.52:8080${endpoint}`, {
+                method,
+                headers: { 'Content-Type': 'application/json', 'Authorization': token },
+                body: JSON.stringify({ name, description, color })
+            });
+        }
+
+        if (!resp || !resp.ok) {
+            const errData = await resp?.json().catch(() => ({}));
+            throw new Error(errData?.error || 'Uložení projektu selhalo');
+        }
+
+        const savedProj = await resp.json();
+        setMessage(`Projekt "${savedProj.name}" byl úspěšně ${isEditing ? 'upraven' : 'vytvořen'}`);
+        await fetchProjects();
+        await fetchVMs();
+    };
+
+    const handleDeleteProject = (project: Project) => {
+        setConfirmDialog({
+            isOpen: true,
+            message: `Opravdu chcete smazat projekt "${project.name}"? Virtuální stroje v něm přiřazené zůstanou zachovány (budou přesunuty do "Bez projektu").`,
+            onConfirm: async () => {
+                setConfirmDialog(prev => ({ ...prev, isOpen: false }));
+                const token = authToken || localStorage.getItem('vm_manager_token') || '';
+                try {
+                    let resp: Response;
+                    try {
+                        resp = await fetch(`/projects/${project.id}`, {
+                            method: 'DELETE',
+                            headers: { 'Authorization': token }
+                        });
+                    } catch {
+                        resp = await fetch(`http://10.0.10.52:8080/projects/${project.id}`, {
+                            method: 'DELETE',
+                            headers: { 'Authorization': token }
+                        });
+                    }
+                    if (resp && resp.ok) {
+                        setMessage(`Projekt "${project.name}" byl odstraněn`);
+                        if (selectedProjectId === project.id) {
+                            setSelectedProjectId('all');
+                        }
+                        await fetchProjects();
+                        await fetchVMs();
+                    } else {
+                        const errData = await resp?.json().catch(() => ({}));
+                        throw new Error(errData?.error || 'Smazání projektu selhalo');
+                    }
+                } catch (err: any) {
+                    setMessage(`Chyba při mazání projektu: ${err?.message || err}`);
+                }
+            }
+        });
+    };
+
+    const handleAssignVMToProject = async (vmId: number, projectId: string) => {
+        const token = authToken || localStorage.getItem('vm_manager_token') || '';
+        try {
+            let resp: Response;
+            try {
+                resp = await fetch(`/vms/${vmId}/project`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': token },
+                    body: JSON.stringify({ project_id: projectId })
+                });
+            } catch {
+                resp = await fetch(`http://10.0.10.52:8080/vms/${vmId}/project`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': token },
+                    body: JSON.stringify({ project_id: projectId })
+                });
+            }
+            if (!resp || !resp.ok) {
+                const errData = await resp?.json().catch(() => ({}));
+                throw new Error(errData?.error || 'Přiřazení projektu selhalo');
+            }
+            setMessage('Přiřazení projektu bylo aktualizováno');
+            await fetchProjects();
+            await fetchVMs();
+        } catch (err: any) {
+            setMessage(`Chyba: ${err?.message || err}`);
+        }
+    };
+
+    const handleSetProjectVMs = async (projectId: string, vmIds: number[]) => {
+        const token = authToken || localStorage.getItem('vm_manager_token') || '';
+        try {
+            let resp: Response;
+            try {
+                resp = await fetch(`/projects/${projectId}/vms`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': token },
+                    body: JSON.stringify({ vm_ids: vmIds })
+                });
+            } catch {
+                resp = await fetch(`http://10.0.10.52:8080/projects/${projectId}/vms`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': token },
+                    body: JSON.stringify({ vm_ids: vmIds })
+                });
+            }
+            if (!resp || !resp.ok) {
+                const errData = await resp?.json().catch(() => ({}));
+                throw new Error(errData?.error || 'Uložení strojů v projektu selhalo');
+            }
+            setMessage('Stroje v projektu byly úspěšně aktualizovány');
+            await fetchProjects();
+            await fetchVMs();
+        } catch (err: any) {
+            setMessage(`Chyba: ${err?.message || err}`);
         }
     };
 
@@ -483,11 +652,11 @@ function App() {
         }
     };
 
-    const handleConnect = async (localNic: string, targetVmId: string, targetNic: string) => {
+    const handleConnect = async (targetVmId: string, localNic: string, targetNic: string) => {
         if (!managingConnectionsVM) return;
         try {
             if (typeof window !== 'undefined' && (window as any).go?.main?.App?.ConnectVMs) {
-                const result = await ConnectVMs(String(managingConnectionsVM.id), localNic, targetVmId, targetNic);
+                const result = await ConnectVMs(String(managingConnectionsVM.id), targetVmId, localNic, targetNic);
                 setMessage(result);
             } else {
                 const token = authToken || localStorage.getItem('vm_manager_token') || '';
@@ -505,7 +674,7 @@ function App() {
                     });
                 });
                 if (!resp || !resp.ok) throw new Error('Nepodařilo se propojit virtuální stroje');
-                setMessage(`Stroj ${managingConnectionsVM.name} byl úspěšně propojen s cílovým VM`);
+                setMessage(`Virtuální stroje byly úspěšně propojeny`);
             }
             await fetchVMs();
         } catch (error: any) {
@@ -513,29 +682,28 @@ function App() {
         }
     };
 
-    const handleDisconnect = async (targetId: string) => {
+    const handleDisconnect = async (localNic: string) => {
         if (!managingConnectionsVM) return;
         try {
             if (typeof window !== 'undefined' && (window as any).go?.main?.App?.DisconnectVMs) {
-                const result = await DisconnectVMs(String(managingConnectionsVM.id), targetId);
+                const result = await DisconnectVMs(String(managingConnectionsVM.id), localNic);
                 setMessage(result);
             } else {
                 const token = authToken || localStorage.getItem('vm_manager_token') || '';
-                const vmid1 = parseInt(String(managingConnectionsVM.id), 10);
-                const vmid2 = parseInt(targetId, 10);
+                const vmid = parseInt(String(managingConnectionsVM.id), 10);
                 const resp = await fetch('/vms/network/disconnect', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'Authorization': token },
-                    body: JSON.stringify({ vmid1, vmid2 })
+                    body: JSON.stringify({ vmid, nic: localNic })
                 }).catch(async () => {
                     return await fetch('http://10.0.10.52:8080/vms/network/disconnect', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json', 'Authorization': token },
-                        body: JSON.stringify({ vmid1, vmid2 })
+                        body: JSON.stringify({ vmid, nic: localNic })
                     });
                 });
-                if (!resp || !resp.ok) throw new Error('Nepodařilo se odpojit virtuální stroje');
-                setMessage(`Stroj ${managingConnectionsVM.name} byl odpojen od cílového VM`);
+                if (!resp || !resp.ok) throw new Error('Nepodařilo se odpojit síť');
+                setMessage(`Rozhraní ${localNic} bylo odpojeno`);
             }
             await fetchVMs();
         } catch (error: any) {
@@ -545,12 +713,19 @@ function App() {
 
     if (launchedConsoleVM) {
         return (
-            <div style={{ height: '100vh', width: '100vw', backgroundColor: 'var(--bg-color)', margin: 0, padding: 0 }}>
+            <div style={{ width: '100vw', height: '100vh', backgroundColor: '#000000' }}>
                 <VMConsole 
                     vmId={launchedConsoleParams?.id || launchedConsoleVM}
                     vmName={launchedConsoleParams?.name || launchedConsoleVM}
+                    vmNode={launchedConsoleParams?.node}
                     token={launchedConsoleParams?.token || authToken}
-                    onClose={() => Quit()} 
+                    onClose={() => {
+                        try {
+                            Quit();
+                        } catch {
+                            window.close();
+                        }
+                    }}
                 />
             </div>
         );
@@ -558,10 +733,9 @@ function App() {
 
     if (isVerifyingSession) {
         return (
-            <div className="login-container">
-                <div className="card login-card" style={{ textAlign: 'center', padding: '36px 24px' }}>
-                    <p style={{ margin: 0, color: 'var(--text-muted)' }}>Ověřování přihlášení...</p>
-                </div>
+            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', flexDirection: 'column', gap: '16px' }}>
+                <div style={{ fontSize: '18px', fontWeight: 600 }}>Správce Virtuálních Strojů</div>
+                <div style={{ color: 'var(--text-muted)' }}>Ověřování přihlášení...</div>
             </div>
         );
     }
@@ -581,6 +755,24 @@ function App() {
                 message={confirmDialog.message}
                 onConfirm={confirmDialog.onConfirm}
                 onCancel={() => setConfirmDialog(prev => ({ ...prev, isOpen: false }))}
+            />
+
+            <ProjectModal 
+                isOpen={isProjectModalOpen}
+                project={editingProject}
+                onClose={() => {
+                    setIsProjectModalOpen(false);
+                    setEditingProject(null);
+                }}
+                onSave={handleCreateOrUpdateProject}
+            />
+
+            <AssignProjectVMsModal 
+                isOpen={managingVMsProject !== null}
+                project={managingVMsProject}
+                allVMs={vms}
+                onClose={() => setManagingVMsProject(null)}
+                onSaveVMs={handleSetProjectVMs}
             />
 
             <NetworkingModal 
@@ -657,20 +849,40 @@ function App() {
                     <CreateVMCard 
                         templates={templates}
                         nodes={nodes}
+                        projects={projects}
+                        selectedProjectId={selectedProjectId}
                         onCreateVM={handleCreateVM}
                         userRole={userRole}
                     />
 
                     <VMTable 
                         vms={filteredVMs}
+                        projects={projects}
+                        selectedProjectId={selectedProjectId}
                         userRole={userRole}
                         isRefreshing={isRefreshing}
-                        onRefresh={() => { fetchVMs(); if (userRole === 'teacher') fetchNodes(); }}
+                        onRefresh={() => { 
+                            fetchVMs(); 
+                            fetchProjects();
+                            if (userRole === 'teacher') fetchNodes(); 
+                        }}
                         onStartVM={handleStartVM}
                         onStopVM={handleStopVM}
                         onOpenConsole={handleOpenConsole}
                         onManageNetworking={(vm) => setManagingConnectionsVM(vm)}
                         onDeleteVM={handleDeleteVM}
+                        onSelectProject={setSelectedProjectId}
+                        onCreateProjectClick={() => {
+                            setEditingProject(null);
+                            setIsProjectModalOpen(true);
+                        }}
+                        onEditProjectClick={(p) => {
+                            setEditingProject(p);
+                            setIsProjectModalOpen(true);
+                        }}
+                        onDeleteProjectClick={handleDeleteProject}
+                        onManageProjectVMsClick={(p) => setManagingVMsProject(p)}
+                        onAssignVMProject={handleAssignVMToProject}
                     />
                 </>
             )}
