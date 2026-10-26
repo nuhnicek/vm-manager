@@ -62,6 +62,7 @@ function App() {
     const [activeConsoleVM, setActiveConsoleVM] = useState<main.VM | null>(null);
     const [launchedConsoleParams, setLaunchedConsoleParams] = useState<Record<string, string> | null>(null);
     const [showNetworkMap, setShowNetworkMap] = useState<boolean>(false);
+    const [pendingVMActions, setPendingVMActions] = useState<Record<string, string>>({});
     const [confirmDialog, setConfirmDialog] = useState<{
         isOpen: boolean;
         message: string;
@@ -335,7 +336,17 @@ function App() {
         setSelectedNode('');
     };
 
-    const executeAction = async (actionFn: (id: string) => Promise<string>, id: string, endpoint?: string, node?: string) => {
+    const executeAction = async (actionFn: (id: string) => Promise<string>, id: string, endpoint?: string, node?: string, actionType?: string) => {
+        if (actionType) {
+            setPendingVMActions(prev => ({ ...prev, [id]: actionType }));
+        }
+        if (actionType === 'start') {
+            setVms(prev => prev.map(v => String(v.id) === id ? ({ ...v, status: 'Running' } as any) : v));
+        } else if (actionType === 'stop') {
+            setVms(prev => prev.map(v => String(v.id) === id ? ({ ...v, status: 'Stopped' } as any) : v));
+        } else if (actionType === 'delete') {
+            setVms(prev => prev.filter(v => String(v.id) !== id));
+        }
         try {
             if (typeof window !== 'undefined' && (window as any).go?.main?.App) {
                 const result = await actionFn(id);
@@ -360,6 +371,13 @@ function App() {
             triggerRefetch();
         } catch (error: any) {
             setMessage(`Chyba: ${error?.message || error}`);
+            triggerRefetch();
+        } finally {
+            setPendingVMActions(prev => {
+                const next = { ...prev };
+                delete next[id];
+                return next;
+            });
         }
     };
 
@@ -368,28 +386,29 @@ function App() {
         id: string,
         confirmMsg: string,
         endpoint?: string,
-        node?: string
+        node?: string,
+        actionType?: string
     ) => {
         setConfirmDialog({
             isOpen: true,
             message: confirmMsg,
             onConfirm: () => {
                 setConfirmDialog(prev => ({ ...prev, isOpen: false }));
-                executeAction(actionFn, id, endpoint, node);
+                executeAction(actionFn, id, endpoint, node, actionType);
             }
         });
     };
 
     const handleStartVM = (id: string, _name: string, node?: string) => {
-        executeAction(StartVM, id, '/vms/start', node);
+        executeAction(StartVM, id, '/vms/start', node, 'start');
     };
 
     const handleStopVM = (id: string, name: string, node?: string) => {
-        handleActionWithConfirm(StopVM, id, `Opravdu chcete zastavit virtuální stroj ${name}?`, '/vms/stop', node);
+        handleActionWithConfirm(StopVM, id, `Opravdu chcete zastavit virtuální stroj ${name}?`, '/vms/stop', node, 'stop');
     };
 
     const handleDeleteVM = (id: string, name: string, node?: string) => {
-        handleActionWithConfirm(DeleteVM, id, `Opravdu chcete SMAZAT virtuální stroj ${name}? Tuto akci nelze vrátit.`, '/vms/delete', node);
+        handleActionWithConfirm(DeleteVM, id, `Opravdu chcete SMAZAT virtuální stroj ${name}? Tuto akci nelze vrátit.`, '/vms/delete', node, 'delete');
     };
 
     const handleOpenConsole = (id: string, node?: string) => {
@@ -656,12 +675,15 @@ function App() {
     const handleConnectLabNetwork = async (targetVm?: main.VM) => {
         const vmToUse = targetVm || managingConnectionsVM;
         if (!vmToUse) return;
+        const vmidStr = String(vmToUse.id);
+        setPendingVMActions(prev => ({ ...prev, [vmidStr]: 'lab_connect' }));
+        setVms(prev => prev.map(v => String(v.id) === vmidStr ? { ...v, has_internet: true } as any : v));
         try {
             if (typeof window !== 'undefined' && (window as any).go?.main?.App?.ConnectToLabNetwork) {
-                const result = await (window as any).go.main.App.ConnectToLabNetwork(String(vmToUse.id));
+                const result = await (window as any).go.main.App.ConnectToLabNetwork(vmidStr);
                 setMessage(result);
             } else {
-                const vmid = parseInt(String(vmToUse.id), 10);
+                const vmid = parseInt(vmidStr, 10);
                 const resp = await apiFetch('/vms/network/lab-connect', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -673,7 +695,7 @@ function App() {
                 }
                 setMessage(`Stroj ${vmToUse.name} byl úspěšně připojen k laboratorní síti (Internet)`);
             }
-            if (managingConnectionsVM && String(managingConnectionsVM.id) === String(vmToUse.id)) {
+            if (managingConnectionsVM && String(managingConnectionsVM.id) === vmidStr) {
                 setManagingConnectionsVM({
                     ...managingConnectionsVM,
                     has_internet: true
@@ -682,18 +704,28 @@ function App() {
             triggerRefetch();
         } catch (error: any) {
             setMessage(`Chyba: ${error?.message || error}`);
+            triggerRefetch();
+        } finally {
+            setPendingVMActions(prev => {
+                const next = { ...prev };
+                delete next[vmidStr];
+                return next;
+            });
         }
     };
 
     const handleDisconnectLabNetwork = async (targetVm?: main.VM) => {
         const vmToUse = targetVm || managingConnectionsVM;
         if (!vmToUse) return;
+        const vmidStr = String(vmToUse.id);
+        setPendingVMActions(prev => ({ ...prev, [vmidStr]: 'lab_disconnect' }));
+        setVms(prev => prev.map(v => String(v.id) === vmidStr ? { ...v, has_internet: false } as any : v));
         try {
             if (typeof window !== 'undefined' && (window as any).go?.main?.App?.DisconnectFromLabNetwork) {
-                const result = await (window as any).go.main.App.DisconnectFromLabNetwork(String(vmToUse.id));
+                const result = await (window as any).go.main.App.DisconnectFromLabNetwork(vmidStr);
                 setMessage(result);
             } else {
-                const vmid = parseInt(String(vmToUse.id), 10);
+                const vmid = parseInt(vmidStr, 10);
                 const resp = await apiFetch('/vms/network/lab-disconnect', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -705,7 +737,7 @@ function App() {
                 }
                 setMessage(`Stroj ${vmToUse.name} byl odpojen od laboratorní sítě`);
             }
-            if (managingConnectionsVM && String(managingConnectionsVM.id) === String(vmToUse.id)) {
+            if (managingConnectionsVM && String(managingConnectionsVM.id) === vmidStr) {
                 setManagingConnectionsVM({
                     ...managingConnectionsVM,
                     has_internet: false,
@@ -719,6 +751,13 @@ function App() {
             triggerRefetch();
         } catch (error: any) {
             setMessage(`Chyba: ${error?.message || error}`);
+            triggerRefetch();
+        } finally {
+            setPendingVMActions(prev => {
+                const next = { ...prev };
+                delete next[vmidStr];
+                return next;
+            });
         }
     };
 
@@ -918,6 +957,7 @@ function App() {
                         onOpenCatalogClick={() => setIsCatalogModalOpen(true)}
                         onConnectLabNetwork={(vm) => handleConnectLabNetwork(vm)}
                         onDisconnectLabNetwork={(vm) => handleDisconnectLabNetwork(vm)}
+                        pendingActions={pendingVMActions}
                     />
                 </>
             )}

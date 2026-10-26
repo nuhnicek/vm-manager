@@ -10,6 +10,8 @@ interface SetIPModalProps {
 }
 
 export function SetIPModal({ isOpen, vm, onClose, onSuccess }: SetIPModalProps) {
+    const nics = (vm?.available_nics && vm.available_nics.length > 0) ? vm.available_nics : ['net0'];
+    const [selectedNic, setSelectedNic] = useState<string>('net0');
     const [isDHCP, setIsDHCP] = useState(true);
     const [ip, setIp] = useState('');
     const [gateway, setGateway] = useState('10.0.10.1');
@@ -17,28 +19,62 @@ export function SetIPModal({ isOpen, vm, onClose, onSuccess }: SetIPModalProps) 
     const [error, setError] = useState('');
     const [successMsg, setSuccessMsg] = useState('');
 
+    const getNicDetails = (nicName: string) => {
+        if (!vm) return { isUntagged: false, tag: null, currentIP: '', isDHCP: false, gateway: '', raw: '' };
+        const desc = (vm.networks || []).find(n => n.startsWith(nicName + ':'));
+        if (!desc) return { isUntagged: false, tag: null, currentIP: '', isDHCP: false, gateway: '', raw: '' };
+        const raw = desc.replace(nicName + ':', '').trim();
+        const tagMatch = raw.match(/tag=(\d+)/);
+        const tag = tagMatch ? tagMatch[1] : null;
+        const isUntagged = !tag;
+        const ipMatch = raw.match(/ip=([^,]+)/);
+        const ipVal = ipMatch ? ipMatch[1] : '';
+        const isDHCPVal = ipVal.toLowerCase() === 'dhcp';
+        const gwMatch = raw.match(/gw=([^,]+)/);
+        const gwVal = gwMatch ? gwMatch[1] : '';
+        return { isUntagged, tag, currentIP: ipVal, isDHCP: isDHCPVal, gateway: gwVal, raw };
+    };
+
+    const loadNicConfig = (nicName: string) => {
+        if (!vm) return;
+        const details = getNicDetails(nicName);
+        if (details.isDHCP) {
+            setIsDHCP(true);
+            setIp('');
+            setGateway(details.gateway || '10.0.10.1');
+        } else if (details.currentIP && details.currentIP !== 'none') {
+            setIsDHCP(false);
+            setIp(details.currentIP);
+            setGateway(details.gateway || '10.0.10.1');
+        } else if (nicName === 'net0' && vm.configured_ip) {
+            if (vm.configured_ip.toLowerCase() === 'dhcp') {
+                setIsDHCP(true);
+                setIp('');
+                setGateway(vm.gateway || '10.0.10.1');
+            } else {
+                setIsDHCP(false);
+                setIp(vm.configured_ip);
+                setGateway(vm.gateway || '10.0.10.1');
+            }
+        } else if (details.tag) {
+            setIsDHCP(false);
+            const lastOctet = (vm.id % 200) + 50;
+            setIp(`10.0.1.${lastOctet}/24`);
+            setGateway('');
+        } else {
+            setIsDHCP(true);
+            setIp('');
+            setGateway('10.0.10.1');
+        }
+    };
+
     useEffect(() => {
         if (isOpen && vm) {
             setError('');
             setSuccessMsg('');
-            const cfg = vm.configured_ip ? vm.configured_ip.trim() : '';
-            if (cfg.toLowerCase() === 'dhcp') {
-                setIsDHCP(true);
-                setIp('');
-                setGateway(vm.gateway || '10.0.10.1');
-            } else if (cfg) {
-                setIsDHCP(false);
-                setIp(cfg);
-                setGateway(vm.gateway || '10.0.10.1');
-            } else if (vm.ip_address) {
-                setIsDHCP(false);
-                setIp(vm.ip_address.includes('/') ? vm.ip_address : `${vm.ip_address}/24`);
-                setGateway(vm.gateway || '10.0.10.1');
-            } else {
-                setIsDHCP(true);
-                setIp('');
-                setGateway('10.0.10.1');
-            }
+            const initialNic = (vm.available_nics && vm.available_nics.length > 0) ? vm.available_nics[0] : 'net0';
+            setSelectedNic(initialNic);
+            loadNicConfig(initialNic);
         }
     }, [isOpen, vm]);
 
@@ -48,7 +84,7 @@ export function SetIPModal({ isOpen, vm, onClose, onSuccess }: SetIPModalProps) 
 
     const handleApplyPreset = (prefix: string, defaultGW: string) => {
         setIsDHCP(false);
-        const lastOctet = vm.id % 200 + 50;
+        const lastOctet = (vm.id % 200) + 50;
         setIp(`${prefix}.${lastOctet}/24`);
         setGateway(defaultGW);
     };
@@ -73,6 +109,7 @@ export function SetIPModal({ isOpen, vm, onClose, onSuccess }: SetIPModalProps) 
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     vmid: vm.id,
+                    nic: selectedNic,
                     ip: isDHCP ? '' : ip.trim(),
                     gateway: isDHCP ? '' : gateway.trim(),
                     is_dhcp: isDHCP,
@@ -85,11 +122,11 @@ export function SetIPModal({ isOpen, vm, onClose, onSuccess }: SetIPModalProps) 
                 throw new Error(errData.error || `Chyba při ukládání IP (${resp.status})`);
             }
 
-            setSuccessMsg('IP adresa byla úspěšně aktualizována.');
+            setSuccessMsg(`IP adresa na rozhraní ${selectedNic} byla úspěšně uložena.`);
             setTimeout(() => {
                 onSuccess();
                 onClose();
-            }, 600);
+            }, 500);
         } catch (err: any) {
             setError(err.message || 'Nastavení IP selhalo');
         } finally {
@@ -99,7 +136,7 @@ export function SetIPModal({ isOpen, vm, onClose, onSuccess }: SetIPModalProps) 
 
     return (
         <div className="modal-backdrop">
-            <div className="modal-content" style={{ maxWidth: '520px' }}>
+            <div className="modal-content" style={{ maxWidth: '560px' }}>
                 <div className="modal-header">
                     <div>
                         <h3 className="modal-title">Konfigurace IP adresy</h3>
@@ -163,7 +200,7 @@ export function SetIPModal({ isOpen, vm, onClose, onSuccess }: SetIPModalProps) 
                         </div>
                         <div style={{ flex: 1 }}>
                             <div style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                                Aktuální runtime IP
+                                Runtime detekovaná IP
                             </div>
                             <div style={{ fontSize: '13px', fontWeight: 600, marginTop: '2px', color: vm.ip_address ? 'var(--primary-color)' : 'var(--text-muted)' }}>
                                 {vm.ip_address || 'Nedetekováno'}
@@ -172,7 +209,60 @@ export function SetIPModal({ isOpen, vm, onClose, onSuccess }: SetIPModalProps) 
                     </div>
 
                     <div className="form-group" style={{ marginBottom: '16px' }}>
-                        <label style={{ fontWeight: 600, marginBottom: '8px', display: 'block' }}>Režim přidělování IP:</label>
+                        <label style={{ fontWeight: 600, marginBottom: '8px', display: 'block' }}>Vyberte síťové rozhraní:</label>
+                        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                            {nics.map(nicName => {
+                                const details = getNicDetails(nicName);
+                                const isSelected = selectedNic === nicName;
+                                return (
+                                    <button
+                                        key={nicName}
+                                        type="button"
+                                        onClick={() => {
+                                            setSelectedNic(nicName);
+                                            loadNicConfig(nicName);
+                                        }}
+                                        style={{
+                                            padding: '8px 12px',
+                                            borderRadius: '8px',
+                                            border: isSelected ? '2px solid var(--primary-color)' : '1px solid var(--border-color)',
+                                            background: isSelected ? 'rgba(59, 130, 246, 0.15)' : 'var(--bg-secondary)',
+                                            color: isSelected ? 'var(--primary-color)' : 'inherit',
+                                            fontWeight: isSelected ? 600 : 400,
+                                            cursor: 'pointer',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: '6px',
+                                            fontSize: '13px',
+                                            transition: 'all 0.15s ease'
+                                        }}
+                                    >
+                                        <code style={{ fontWeight: 700 }}>{nicName}</code>
+                                        {details.isUntagged ? (
+                                            <span style={{ fontSize: '11px', background: 'rgba(16, 185, 129, 0.15)', color: '#10b981', padding: '1px 5px', borderRadius: '4px' }}>
+                                                Lab / Internet
+                                            </span>
+                                        ) : details.tag ? (
+                                            <span style={{ fontSize: '11px', background: 'rgba(59, 130, 246, 0.15)', color: '#3b82f6', padding: '1px 5px', borderRadius: '4px' }}>
+                                                VLAN {details.tag}
+                                            </span>
+                                        ) : (
+                                            <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>vmbr0</span>
+                                        )}
+                                    </button>
+                                );
+                            })}
+                        </div>
+                        {selectedNic && (
+                            <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '8px' }}>
+                                Konfigurujete: <strong style={{ color: 'var(--text-main)' }}>{selectedNic}</strong>
+                                {getNicDetails(selectedNic).raw ? ` [${getNicDetails(selectedNic).raw}]` : ''}
+                            </div>
+                        )}
+                    </div>
+
+                    <div className="form-group" style={{ marginBottom: '16px' }}>
+                        <label style={{ fontWeight: 600, marginBottom: '8px', display: 'block' }}>Režim přidělování pro {selectedNic}:</label>
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                             <button
                                 type="button"
@@ -185,7 +275,8 @@ export function SetIPModal({ isOpen, vm, onClose, onSuccess }: SetIPModalProps) 
                                     color: isDHCP ? 'var(--primary-color)' : 'inherit',
                                     fontWeight: isDHCP ? 600 : 400,
                                     cursor: 'pointer',
-                                    textAlign: 'center'
+                                    textAlign: 'center',
+                                    transition: 'all 0.15s ease'
                                 }}
                             >
                                 DHCP (Automatická IP)
@@ -201,7 +292,8 @@ export function SetIPModal({ isOpen, vm, onClose, onSuccess }: SetIPModalProps) 
                                     color: !isDHCP ? 'var(--primary-color)' : 'inherit',
                                     fontWeight: !isDHCP ? 600 : 400,
                                     cursor: 'pointer',
-                                    textAlign: 'center'
+                                    textAlign: 'center',
+                                    transition: 'all 0.15s ease'
                                 }}
                             >
                                 Statická IP adresa
@@ -236,9 +328,9 @@ export function SetIPModal({ isOpen, vm, onClose, onSuccess }: SetIPModalProps) 
                                         type="button"
                                         className="btn btn-secondary"
                                         style={{ fontSize: '11px', padding: '4px 8px' }}
-                                        onClick={() => handleApplyPreset('172.16.0', '172.16.0.1')}
+                                        onClick={() => handleApplyPreset('10.0.1', '')}
                                     >
-                                        VLAN (172.16.0.x/24)
+                                        VLAN (10.0.1.x/24)
                                     </button>
                                 </div>
                             </div>
@@ -265,7 +357,7 @@ export function SetIPModal({ isOpen, vm, onClose, onSuccess }: SetIPModalProps) 
                                     type="text"
                                     value={gateway}
                                     onChange={e => setGateway(e.target.value)}
-                                    placeholder="např. 10.0.10.1"
+                                    placeholder="např. 10.0.10.1 (nebo prázdné pro izolovanou síť)"
                                     disabled={isSubmitting}
                                     style={{ width: '100%' }}
                                 />
@@ -283,7 +375,7 @@ export function SetIPModal({ isOpen, vm, onClose, onSuccess }: SetIPModalProps) 
                         lineHeight: 1.4,
                         marginBottom: '16px'
                     }}>
-                        Pro plné uplatnění statické konfigurace v běžícím operačním systému může být vyžadován restart stroje.
+                        Konfigurace bude zapsána pro rozhraní {selectedNic}. Pro plné uplatnění statické konfigurace v operačním systému může být vyžadován restart síťové služby nebo stroje.
                     </div>
 
                     <div className="modal-actions">
@@ -291,7 +383,7 @@ export function SetIPModal({ isOpen, vm, onClose, onSuccess }: SetIPModalProps) 
                             Zrušit
                         </button>
                         <button type="submit" className="btn btn-primary" disabled={isSubmitting}>
-                            {isSubmitting ? 'Ukládání...' : 'Uložit IP adresu'}
+                            {isSubmitting ? 'Ukládání...' : `Uložit IP pro ${selectedNic}`}
                         </button>
                     </div>
                 </form>

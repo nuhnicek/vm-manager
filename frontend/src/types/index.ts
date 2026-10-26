@@ -148,6 +148,7 @@ export interface DeployCatalogRequest {
 
 export interface SetIPRequest {
     vmid: number;
+    nic?: string;
     ip: string;
     gateway?: string;
     is_dhcp: boolean;

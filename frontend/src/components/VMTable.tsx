@@ -27,6 +27,7 @@ interface VMTableProps {
     onOpenCatalogClick?: () => void;
     onConnectLabNetwork?: (vm: main.VM) => void;
     onDisconnectLabNetwork?: (vm: main.VM) => void;
+    pendingActions?: Record<string, string>;
 }
 
 export function VMTable({
@@ -52,6 +53,7 @@ export function VMTable({
     onOpenCatalogClick,
     onConnectLabNetwork,
     onDisconnectLabNetwork,
+    pendingActions = {},
 }: VMTableProps) {
     const isTeacher = userRole === 'teacher';
     const [searchQuery, setSearchQuery] = useState('');
@@ -168,6 +170,12 @@ export function VMTable({
         }
 
         return list.map(vm => {
+            const pendingAction = pendingActions[String(vm.id)];
+            const isStarting = pendingAction === 'starting';
+            const isStopping = pendingAction === 'stopping';
+            const isDeleting = pendingAction === 'deleting';
+            const isConnectingLab = pendingAction === 'lab_connect';
+            const isDisconnectingLab = pendingAction === 'lab_disconnect';
             const isRunning = vm.status === 'Running' || vm.status === 'running';
             const isLXC = vm.type === 'lxc';
             const projName = (vm as any).project_name;
@@ -393,16 +401,20 @@ export function VMTable({
                             {!isRunning ? (
                                 <button 
                                     className="btn btn-success btn-sm" 
+                                    disabled={isStarting || isStopping || isDeleting}
                                     onClick={() => onStartVM(String(vm.id), vm.name, (vm as any).node)}
                                 >
-                                    Spustit
+                                    {isStarting && <span className="btn-spinner" />}
+                                    {isStarting ? 'Spouštění...' : 'Spustit'}
                                 </button>
                             ) : (
                                 <button 
                                     className="btn btn-warning btn-sm" 
+                                    disabled={isStarting || isStopping || isDeleting}
                                     onClick={() => onStopVM(String(vm.id), vm.name, (vm as any).node)}
                                 >
-                                    Zastavit
+                                    {isStopping && <span className="btn-spinner" />}
+                                    {isStopping ? 'Zastavování...' : 'Zastavit'}
                                 </button>
                             )}
                             
@@ -434,15 +446,18 @@ export function VMTable({
                                 (vm as any).has_internet ? (
                                     <button 
                                         className="btn btn-secondary btn-sm" 
+                                        disabled={isConnectingLab || isDisconnectingLab}
                                         onClick={() => onDisconnectLabNetwork(vm)}
                                         title="Odpojit od laboratorní sítě (Internet)"
                                         style={{ fontSize: '11px', borderColor: 'rgba(239, 68, 68, 0.4)' }}
                                     >
-                                        Odpojit Lab
+                                        {isDisconnectingLab && <span className="btn-spinner" />}
+                                        {isDisconnectingLab ? 'Odpojování...' : 'Odpojit Lab'}
                                     </button>
                                 ) : (
                                     <button 
                                         className="btn btn-primary btn-sm" 
+                                        disabled={isConnectingLab || isDisconnectingLab}
                                         onClick={() => onConnectLabNetwork(vm)}
                                         title="Připojit stroj k laboratorní síti s internetem pro stahování balíčků a nástrojů"
                                         style={{
@@ -451,7 +466,8 @@ export function VMTable({
                                             borderColor: (vm as any).is_attacker ? '#f97316' : undefined
                                         }}
                                     >
-                                        Připojit Lab Síť
+                                        {isConnectingLab && <span className="btn-spinner" />}
+                                        {isConnectingLab ? 'Připojování...' : 'Připojit Lab Síť'}
                                     </button>
                                 )
                             )}
@@ -487,9 +503,11 @@ export function VMTable({
                             
                             <button 
                                 className="btn btn-danger btn-sm" 
+                                disabled={isDeleting || isStarting || isStopping}
                                 onClick={() => onDeleteVM(String(vm.id), vm.name, (vm as any).node)}
                             >
-                                Smazat
+                                {isDeleting && <span className="btn-spinner" />}
+                                {isDeleting ? 'Mazání...' : 'Smazat'}
                             </button>
                         </div>
                     </td>
