@@ -3,6 +3,7 @@ import { Terminal } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import RFB from '@novnc/novnc';
 import { GetBackendURL } from '../wailsjs/go/main/App';
+import { ClipboardSetText, ClipboardGetText } from '../wailsjs/runtime/runtime';
 import { apiFetch } from './api';
 import { ExternalVNCModal } from './components/ExternalVNCModal';
 import '@xterm/xterm/css/xterm.css';
@@ -57,12 +58,67 @@ export function VMConsole({ vmId, vmName, vmNode, token, onClose, onPopOut }: VM
     const serialWSRef = useRef<WebSocket | null>(null);
     const vncContainerRef = useRef<HTMLDivElement>(null);
     const terminalRef = useRef<HTMLDivElement>(null);
+    const termRef = useRef<Terminal | null>(null);
+    const [isFetchingClipboard, setIsFetchingClipboard] = useState(false);
 
     const showToast = (msg: string) => {
         setToastMessage(msg);
         setTimeout(() => {
             setToastMessage(prev => prev === msg ? null : prev);
         }, 2800);
+    };
+
+    const copyToHostClipboard = async (text: string): Promise<boolean> => {
+        if (!text) return false;
+        try {
+            if (typeof window !== 'undefined' && (window as any).runtime?.ClipboardSetText) {
+                const ok = await (window as any).runtime.ClipboardSetText(text);
+                if (ok) return true;
+            }
+            const ok = await ClipboardSetText(text);
+            if (ok) return true;
+        } catch {}
+
+        try {
+            if (navigator?.clipboard?.writeText) {
+                await navigator.clipboard.writeText(text);
+                return true;
+            }
+        } catch {}
+
+        try {
+            const ta = document.createElement('textarea');
+            ta.value = text;
+            ta.style.position = 'fixed';
+            ta.style.opacity = '0';
+            document.body.appendChild(ta);
+            ta.select();
+            document.execCommand('copy');
+            document.body.removeChild(ta);
+            return true;
+        } catch {}
+
+        return false;
+    };
+
+    const readFromHostClipboard = async (): Promise<string> => {
+        try {
+            if (typeof window !== 'undefined' && (window as any).runtime?.ClipboardGetText) {
+                const txt = await (window as any).runtime.ClipboardGetText();
+                if (txt) return txt;
+            }
+            const txt = await ClipboardGetText();
+            if (txt) return txt;
+        } catch {}
+
+        try {
+            if (navigator?.clipboard?.readText) {
+                const txt = await navigator.clipboard.readText();
+                if (txt) return txt;
+            }
+        } catch {}
+
+        return '';
     };
 
     const sendStringToVNC = (rfb: any, text: string) => {
@@ -95,9 +151,35 @@ export function VMConsole({ vmId, vmName, vmNode, token, onClose, onPopOut }: VM
         }
     };
 
+    const handleFetchGuestClipboard = async () => {
+        if (!vmId) return;
+        setIsFetchingClipboard(true);
+        try {
+            let url = `/vms/console/clipboard?vmid=${encodeURIComponent(String(vmId))}`;
+            if (vmNode) {
+                url += `&node=${encodeURIComponent(vmNode)}`;
+            }
+            const resp = await apiFetch(url);
+            if (resp && resp.ok) {
+                const data = await resp.json();
+                if (data && typeof data.text === 'string' && data.text.length > 0) {
+                    setVmClipboard(data.text);
+                    await copyToHostClipboard(data.text);
+                    showToast(`Schránka načtena ze stroje (${data.text.length} znaků)`);
+                    return;
+                }
+            }
+            showToast('Ve schránce virtuálního stroje není žádný text');
+        } catch {
+            showToast('Nepodařilo se načíst schránku ze stroje');
+        } finally {
+            setIsFetchingClipboard(false);
+        }
+    };
+
     const handleDirectPaste = async () => {
         try {
-            const text = await navigator.clipboard.readText();
+            const text = await readFromHostClipboard();
             if (!text) {
                 setClipboardModalOpen(true);
                 return;
@@ -117,7 +199,7 @@ export function VMConsole({ vmId, vmName, vmNode, token, onClose, onPopOut }: VM
         }
     };
 
-    const handleSendCustomText = (text: string, asKeystrokes: boolean) => {
+    const handleSendCustomText = async (text: string, asKeystrokes: boolean) => {
         if (!text) return;
         if (consoleMode === 'vnc' && rfbRef.current) {
             if (asKeystrokes) {
@@ -125,6 +207,16 @@ export function VMConsole({ vmId, vmName, vmNode, token, onClose, onPopOut }: VM
                 showToast(`Napsáno ${text.length} znaků do VM`);
             } else {
                 rfbRef.current.clipboardPasteFrom(text);
+                if (vmId) {
+                    try {
+                        let url = `/vms/console/clipboard`;
+                        await apiFetch(url, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ vmid: Number(vmId), text, node: vmNode })
+                        });
+                    } catch {}
+                }
                 showToast('Uloženo do schránky VM');
             }
         } else if (consoleMode === 'serial' && serialWSRef.current) {
@@ -137,12 +229,55 @@ export function VMConsole({ vmId, vmName, vmNode, token, onClose, onPopOut }: VM
         setPasteText('');
     };
 
-    const handleCopyVMClipboard = () => {
-        if (vmClipboard) {
-            navigator.clipboard.writeText(vmClipboard);
-            showToast('Zkopírováno ze schránky VM');
+    const handleOpenClipboardModal = () => {
+        setClipboardModalOpen(true);
+        if (vmId) {
+            handleFetchGuestClipboard();
+        }
+    };
+
+    const handleCopyVMClipboard = async () => {
+        let textToCopy = '';
+
+        if (consoleMode === 'serial' && termRef.current?.hasSelection()) {
+            textToCopy = termRef.current.getSelection();
+        }
+
+        if (!textToCopy && vmId) {
+            try {
+                let url = `/vms/console/clipboard?vmid=${encodeURIComponent(String(vmId))}`;
+                if (vmNode) {
+                    url += `&node=${encodeURIComponent(vmNode)}`;
+                }
+                const resp = await apiFetch(url);
+                if (resp && resp.ok) {
+                    const data = await resp.json();
+                    if (data && typeof data.text === 'string' && data.text.length > 0) {
+                        textToCopy = data.text;
+                    }
+                }
+            } catch {}
+        }
+
+        if (!textToCopy && vmClipboard) {
+            textToCopy = vmClipboard;
+        }
+
+        if (!textToCopy && consoleMode === 'serial' && termRef.current) {
+            const sel = termRef.current.getSelection();
+            if (sel) {
+                textToCopy = sel;
+            }
+        }
+
+        if (textToCopy) {
+            setVmClipboard(textToCopy);
+            await copyToHostClipboard(textToCopy);
+            const snippet = textToCopy.length > 30 ? textToCopy.slice(0, 30) + '...' : textToCopy;
+            showToast(`Zkopírováno ze schránky VM (${textToCopy.length} znaků): "${snippet}"`);
         } else {
-            showToast('Schránka VM je prázdná');
+            setClipboardModalOpen(true);
+            showToast('Schránka VM je zatím prázdná');
         }
     };
 
@@ -231,14 +366,13 @@ export function VMConsole({ vmId, vmName, vmNode, token, onClose, onPopOut }: VM
                     }
                 });
 
-                rfb.addEventListener('clipboard', (e: any) => {
+                rfb.addEventListener('clipboard', async (e: any) => {
                     if (isDisposed) return;
                     if (e?.detail?.text) {
                         setVmClipboard(e.detail.text);
-                        try {
-                            navigator.clipboard.writeText(e.detail.text);
-                            showToast('Schránka z VM zkopírována do počítače');
-                        } catch {}
+                        await copyToHostClipboard(e.detail.text);
+                        const snippet = e.detail.text.length > 30 ? e.detail.text.slice(0, 30) + '...' : e.detail.text;
+                        showToast(`Schránka z VM zkopírována do počítače: "${snippet}"`);
                     }
                 });
             } catch (err: any) {
@@ -391,10 +525,30 @@ export function VMConsole({ vmId, vmName, vmNode, token, onClose, onPopOut }: VM
                     }
                 });
 
+                termRef.current = term;
+
                 term.attachCustomKeyEventHandler((e) => {
                     if ((e.ctrlKey || e.metaKey) && (e.key === 'v' || e.key === 'V') && e.type === 'keydown') {
                         handleDirectPaste();
                         return false;
+                    }
+                    if ((e.ctrlKey || e.metaKey) && (e.key === 'c' || e.key === 'C') && e.type === 'keydown') {
+                        if (term.hasSelection()) {
+                            const sel = term.getSelection();
+                            setVmClipboard(sel);
+                            copyToHostClipboard(sel);
+                            showToast(`Zkopírováno ${sel.length} znaků z terminálu`);
+                            return false;
+                        }
+                    }
+                    if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'c' || e.key === 'C') && e.type === 'keydown') {
+                        const sel = term.getSelection();
+                        if (sel) {
+                            setVmClipboard(sel);
+                            copyToHostClipboard(sel);
+                            showToast(`Zkopírováno ${sel.length} znaků z terminálu`);
+                            return false;
+                        }
                     }
                     return true;
                 });
@@ -402,9 +556,7 @@ export function VMConsole({ vmId, vmName, vmNode, token, onClose, onPopOut }: VM
                 term.onSelectionChange(() => {
                     const sel = term.getSelection();
                     if (sel) {
-                        try {
-                            navigator.clipboard.writeText(sel);
-                        } catch {}
+                        setVmClipboard(sel);
                     }
                 });
             } catch (err: any) {
@@ -428,6 +580,7 @@ export function VMConsole({ vmId, vmName, vmNode, token, onClose, onPopOut }: VM
             isDisposed = true;
             window.removeEventListener('resize', handleResize);
             serialWSRef.current = null;
+            termRef.current = null;
             if (ws) {
                 try {
                     ws.close();
@@ -514,6 +667,20 @@ export function VMConsole({ vmId, vmName, vmNode, token, onClose, onPopOut }: VM
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <button
                         type="button"
+                        onClick={handleCopyVMClipboard}
+                        className="btn btn-secondary btn-sm"
+                        style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                        title="Zkopírovat schránku z virtuálního stroje do vašeho počítače"
+                    >
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                        </svg>
+                        <span>Kopírovat z VM</span>
+                    </button>
+
+                    <button
+                        type="button"
                         onClick={handleDirectPaste}
                         className="btn btn-secondary btn-sm"
                         style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}
@@ -528,7 +695,7 @@ export function VMConsole({ vmId, vmName, vmNode, token, onClose, onPopOut }: VM
 
                     <button
                         type="button"
-                        onClick={() => setClipboardModalOpen(true)}
+                        onClick={handleOpenClipboardModal}
                         className="btn btn-secondary btn-sm"
                         title="Otevřít textové pole pro vložení / psaní delšího textu či hesel"
                     >
@@ -681,6 +848,15 @@ export function VMConsole({ vmId, vmName, vmNode, token, onClose, onPopOut }: VM
                         <span style={{ color: 'var(--text-muted)', fontWeight: 600 }}>SCHRÁNKA:</span>
                         <button
                             type="button"
+                            onClick={handleCopyVMClipboard}
+                            className="btn btn-secondary btn-sm"
+                            style={{ fontSize: '11px', padding: '2px 8px' }}
+                            title="Zkopírovat schránku z VM do vašeho počítače"
+                        >
+                            Kopírovat z VM
+                        </button>
+                        <button
+                            type="button"
                             onClick={handleDirectPaste}
                             className="btn btn-secondary btn-sm"
                             style={{ fontSize: '11px', padding: '2px 8px' }}
@@ -690,12 +866,12 @@ export function VMConsole({ vmId, vmName, vmNode, token, onClose, onPopOut }: VM
                         </button>
                         <button
                             type="button"
-                            onClick={handleCopyVMClipboard}
+                            onClick={handleOpenClipboardModal}
                             className="btn btn-secondary btn-sm"
                             style={{ fontSize: '11px', padding: '2px 8px' }}
-                            title="Zkopírovat schránku z VM do vašeho počítače"
+                            title="Otevřít správce schránky a textů"
                         >
-                            Kopírovat z VM
+                            Správce schránky
                         </button>
 
                         <div style={{ width: '1px', height: '16px', backgroundColor: 'var(--border-color)', margin: '0 4px' }} />
@@ -774,6 +950,16 @@ export function VMConsole({ vmId, vmName, vmNode, token, onClose, onPopOut }: VM
 
                 <div
                     ref={terminalRef}
+                    onMouseUp={() => {
+                        if (termRef.current?.hasSelection()) {
+                            const sel = termRef.current.getSelection();
+                            if (sel) {
+                                setVmClipboard(sel);
+                                copyToHostClipboard(sel);
+                                showToast(`Zkopírováno ${sel.length} znaků z terminálu`);
+                            }
+                        }
+                    }}
                     style={{
                         display: consoleMode === 'serial' ? 'block' : 'none',
                         width: '100%',
@@ -786,12 +972,12 @@ export function VMConsole({ vmId, vmName, vmNode, token, onClose, onPopOut }: VM
 
             {clipboardModalOpen && (
                 <div className="modal-backdrop" style={{ zIndex: 100000 }}>
-                    <div className="modal-content" style={{ maxWidth: '520px', width: '92%' }}>
+                    <div className="modal-content" style={{ maxWidth: '560px', width: '92%' }}>
                         <div className="modal-header">
                             <div>
-                                <h3 className="modal-title">Vložit text do konzole</h3>
+                                <h3 className="modal-title">Správce schránky & Psaní</h3>
                                 <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: 'var(--text-muted)' }}>
-                                    Odeslání textu, hesel nebo skriptů do virtuálního stroje
+                                    Obousměrná schránka mezi vaším počítačem a virtuálním strojem
                                 </p>
                             </div>
                             <button
@@ -809,54 +995,141 @@ export function VMConsole({ vmId, vmName, vmNode, token, onClose, onPopOut }: VM
                             </button>
                         </div>
 
-                        <div style={{ padding: '20px 24px' }}>
-                            <textarea
-                                value={pasteText}
-                                onChange={e => setPasteText(e.target.value)}
-                                placeholder="Vložte sem text, příkaz nebo heslo k odeslání do stroje..."
-                                rows={6}
-                                style={{
-                                    width: '100%',
-                                    padding: '10px 12px',
-                                    fontFamily: 'monospace',
-                                    fontSize: '13px',
-                                    backgroundColor: 'var(--bg-secondary)',
-                                    border: '1px solid var(--border-color)',
-                                    borderRadius: '6px',
-                                    color: 'var(--text-main)',
-                                    resize: 'vertical',
-                                    marginBottom: '14px',
-                                    boxSizing: 'border-box'
-                                }}
-                                autoFocus
-                            />
-
-                            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                                <button
-                                    type="button"
-                                    className="btn btn-primary"
-                                    onClick={() => handleSendCustomText(pasteText, true)}
-                                    disabled={!pasteText.trim()}
-                                    style={{ fontSize: '12px', flex: 1, minWidth: '160px' }}
-                                    title="Vepíše text jako virtuální stisky kláves (funguje v každém Linux shellu i konzoli)"
-                                >
-                                    Napsat do konzole (klávesnice)
-                                </button>
-                                {consoleMode === 'vnc' && (
+                        <div style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                            <div style={{
+                                backgroundColor: 'var(--card-bg-subtle)',
+                                border: '1px solid var(--border-color)',
+                                borderRadius: '8px',
+                                padding: '14px 16px'
+                            }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                                    <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-main)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                                        Schránka z virtuálního stroje
+                                    </span>
                                     <button
                                         type="button"
-                                        className="btn btn-secondary"
-                                        onClick={() => handleSendCustomText(pasteText, false)}
-                                        disabled={!pasteText.trim()}
-                                        style={{ fontSize: '12px', flex: 1, minWidth: '160px' }}
-                                        title="Nastaví text do schránky grafického systému VM (pro Ctrl+V v GUI)"
+                                        className="btn btn-secondary btn-sm"
+                                        onClick={handleFetchGuestClipboard}
+                                        disabled={isFetchingClipboard}
+                                        style={{ fontSize: '11px', padding: '2px 8px' }}
+                                        title="Znovu přečíst aktuální obsah schránky z virtuálního stroje"
                                     >
-                                        Uložit do schránky VM
+                                        {isFetchingClipboard ? 'Načítání...' : 'Obnovit ze stroje'}
                                     </button>
+                                </div>
+
+                                {vmClipboard ? (
+                                    <>
+                                        <div style={{
+                                            maxHeight: '110px',
+                                            overflowY: 'auto',
+                                            padding: '8px 10px',
+                                            backgroundColor: 'var(--bg-secondary)',
+                                            border: '1px solid var(--border-color)',
+                                            borderRadius: '6px',
+                                            fontSize: '12px',
+                                            fontFamily: 'monospace',
+                                            whiteSpace: 'pre-wrap',
+                                            wordBreak: 'break-all',
+                                            color: 'var(--text-main)',
+                                            marginBottom: '10px'
+                                        }}>
+                                            {vmClipboard}
+                                        </div>
+                                        <div style={{ display: 'flex', gap: '8px' }}>
+                                            <button
+                                                type="button"
+                                                className="btn btn-primary btn-sm"
+                                                onClick={async () => {
+                                                    await copyToHostClipboard(vmClipboard);
+                                                    showToast(`Zkopírováno ${vmClipboard.length} znaků do vašeho počítače`);
+                                                }}
+                                                style={{ fontSize: '12px' }}
+                                                title="Zkopírovat tento text do systémové schránky vašeho počítače"
+                                            >
+                                                Zkopírovat do počítače
+                                            </button>
+                                        </div>
+                                    </>
+                                ) : (
+                                    <div style={{ fontSize: '12px', color: 'var(--text-muted)', fontStyle: 'italic', padding: '8px 0' }}>
+                                        Ve schránce virtuálního stroje zatím není žádný text (nebo ještě nebyl vybrán text v grafickém rozhraní či terminálu).
+                                    </div>
                                 )}
                             </div>
 
-                            <div className="modal-actions" style={{ marginTop: '16px' }}>
+                            <div>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                                    <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-main)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                                        Vložit text do virtuálního stroje
+                                    </span>
+                                    <button
+                                        type="button"
+                                        className="btn btn-secondary btn-sm"
+                                        onClick={async () => {
+                                            const txt = await readFromHostClipboard();
+                                            if (txt) {
+                                                setPasteText(txt);
+                                                showToast(`Načteno ${txt.length} znaků ze schránky počítače`);
+                                            } else {
+                                                showToast('Schránka počítače je prázdná');
+                                            }
+                                        }}
+                                        style={{ fontSize: '11px', padding: '2px 8px' }}
+                                        title="Přečíst text ze systémové schránky počítače a vložit do pole"
+                                    >
+                                        Vložit ze schránky počítače
+                                    </button>
+                                </div>
+
+                                <textarea
+                                    value={pasteText}
+                                    onChange={e => setPasteText(e.target.value)}
+                                    placeholder="Vložte sem text, příkaz nebo heslo k odeslání do stroje..."
+                                    rows={5}
+                                    style={{
+                                        width: '100%',
+                                        padding: '10px 12px',
+                                        fontFamily: 'monospace',
+                                        fontSize: '13px',
+                                        backgroundColor: 'var(--bg-secondary)',
+                                        border: '1px solid var(--border-color)',
+                                        borderRadius: '6px',
+                                        color: 'var(--text-main)',
+                                        resize: 'vertical',
+                                        marginBottom: '10px',
+                                        boxSizing: 'border-box'
+                                    }}
+                                    autoFocus
+                                />
+
+                                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                                    <button
+                                        type="button"
+                                        className="btn btn-primary"
+                                        onClick={() => handleSendCustomText(pasteText, true)}
+                                        disabled={!pasteText.trim()}
+                                        style={{ fontSize: '12px', flex: 1, minWidth: '160px' }}
+                                        title="Vepíše text jako virtuální stisky kláves (funguje v každém Linux shellu i konzoli)"
+                                    >
+                                        Napsat do konzole (klávesnice)
+                                    </button>
+                                    {consoleMode === 'vnc' && (
+                                        <button
+                                            type="button"
+                                            className="btn btn-secondary"
+                                            onClick={() => handleSendCustomText(pasteText, false)}
+                                            disabled={!pasteText.trim()}
+                                            style={{ fontSize: '12px', flex: 1, minWidth: '160px' }}
+                                            title="Nastaví text do schránky grafického systému VM (pro Ctrl+V v GUI)"
+                                        >
+                                            Uložit do schránky VM
+                                        </button>
+                                    )}
+                                </div>
+                            </div>
+
+                            <div className="modal-actions" style={{ marginTop: '0', paddingTop: '10px', borderTop: '1px solid var(--border-color)' }}>
                                 <button
                                     type="button"
                                     className="btn btn-secondary"
@@ -865,7 +1138,7 @@ export function VMConsole({ vmId, vmName, vmNode, token, onClose, onPopOut }: VM
                                         setPasteText('');
                                     }}
                                 >
-                                    Zrušit
+                                    Zavřít
                                 </button>
                             </div>
                         </div>
