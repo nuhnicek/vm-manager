@@ -27,13 +27,8 @@ export function Header({
         <header className="header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--primary-color)' }}>
-                        <rect x="2" y="2" width="20" height="8" rx="2" ry="2"></rect>
-                        <rect x="2" y="14" width="20" height="8" rx="2" ry="2"></rect>
-                        <line x1="6" y1="6" x2="6.01" y2="6"></line>
-                        <line x1="6" y1="18" x2="6.01" y2="18"></line>
-                    </svg>
-                    <h2 style={{ margin: 0 }}>Správce Virtuálních Strojů</h2>
+                    
+                    <h2 style={{ margin: 0 }}>Lab411</h2>
                 </div>
 
                 {isTeacher && (
@@ -55,18 +50,6 @@ export function Header({
             </div>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                {currentUser && (
-                    <span className="user-badge" title="Přihlášená relace">
-                        <span className="user-badge-dot"></span>
-                        {currentUser}
-                    </span>
-                )}
-                {isTeacher && (
-                    <span className="status-badge status-running">
-                        <span className="status-badge-dot"></span>
-                        UČITEL
-                    </span>
-                )}
                 <button 
                     className="theme-toggle-btn"
                     onClick={onToggleTheme}

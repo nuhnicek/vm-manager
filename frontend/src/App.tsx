@@ -20,6 +20,8 @@ import { TeacherView } from './components/TeacherView';
 import { Project } from './types';
 import { ProjectModal } from './components/ProjectModal';
 import { AssignProjectVMsModal } from './components/AssignProjectVMsModal';
+import { SetIPModal } from './components/SetIPModal';
+import { CatalogModal } from './components/CatalogModal';
 import { apiFetch } from './api';
 
 import './App.css';
@@ -50,6 +52,8 @@ function App() {
     const [isProjectModalOpen, setIsProjectModalOpen] = useState(false);
     const [editingProject, setEditingProject] = useState<Project | null>(null);
     const [managingVMsProject, setManagingVMsProject] = useState<Project | null>(null);
+    const [settingIPVM, setSettingIPVM] = useState<main.VM | null>(null);
+    const [isCatalogModalOpen, setIsCatalogModalOpen] = useState(false);
 
     const [isRefreshing, setIsRefreshing] = useState(false);
     const [message, setMessage] = useState('');
@@ -706,6 +710,23 @@ function App() {
                 onDisconnect={handleDisconnect}
             />
 
+            <SetIPModal 
+                isOpen={settingIPVM !== null}
+                vm={settingIPVM}
+                onClose={() => setSettingIPVM(null)}
+                onSuccess={triggerRefetch}
+            />
+
+            <CatalogModal 
+                isOpen={isCatalogModalOpen}
+                projects={projects}
+                nodes={nodes}
+                selectedProjectId={selectedProjectId}
+                onClose={() => setIsCatalogModalOpen(false)}
+                onSuccess={triggerRefetch}
+                userRole={userRole}
+            />
+
             {showNetworkMap && (
                 <NetworkTopologyModal
                     isOpen={showNetworkMap}
@@ -794,6 +815,8 @@ function App() {
                         onDeleteProjectClick={handleDeleteProject}
                         onManageProjectVMsClick={(p) => setManagingVMsProject(p)}
                         onAssignVMProject={handleAssignVMToProject}
+                        onSetIPClick={(vm) => setSettingIPVM(vm)}
+                        onOpenCatalogClick={() => setIsCatalogModalOpen(true)}
                     />
                 </>
             )}

@@ -77,9 +77,15 @@ export namespace main {
 	export class VM {
 	    id: number;
 	    uuid?: string;
+	    type?: string;
 	    name: string;
 	    status?: string;
 	    ram_mb?: number;
+	    ip_address?: string;
+	    configured_ip?: string;
+	    gateway?: string;
+	    is_vulnerable?: boolean;
+	    category?: string;
 	    node?: string;
 	    owner?: string;
 	    project_id?: string;
@@ -97,9 +103,15 @@ export namespace main {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.id = source["id"];
 	        this.uuid = source["uuid"];
+	        this.type = source["type"];
 	        this.name = source["name"];
 	        this.status = source["status"];
 	        this.ram_mb = source["ram_mb"];
+	        this.ip_address = source["ip_address"];
+	        this.configured_ip = source["configured_ip"];
+	        this.gateway = source["gateway"];
+	        this.is_vulnerable = source["is_vulnerable"];
+	        this.category = source["category"];
 	        this.node = source["node"];
 	        this.owner = source["owner"];
 	        this.project_id = source["project_id"];

@@ -83,9 +83,15 @@ export interface Project {
 export interface FleetVM {
     id: number;
     uuid?: string;
+    type?: string;
     name: string;
     status: string;
     ram_mb?: number;
+    ip_address?: string;
+    configured_ip?: string;
+    gateway?: string;
+    is_vulnerable?: boolean;
+    category?: string;
     node?: string;
     owner?: string;
     owner_uuid?: string;
@@ -98,3 +104,41 @@ export interface FleetVM {
     networks?: string[];
     available_nics?: string[];
 }
+
+export interface CatalogItem {
+    id: string;
+    name: string;
+    type: 'lxc' | 'qemu';
+    category: string;
+    description: string;
+    template_id?: number;
+    ostemplate?: string;
+    default_ram: number;
+    default_disk_gb: number;
+    default_cpus: number;
+    is_vulnerable: boolean;
+    ready: boolean;
+}
+
+export interface DeployCatalogRequest {
+    catalog_id: string;
+    name: string;
+    ram?: number;
+    cores?: number;
+    disk?: number;
+    project_id?: string;
+    ip?: string;
+    gateway?: string;
+    is_dhcp?: boolean;
+    node?: string;
+    password?: string;
+}
+
+export interface SetIPRequest {
+    vmid: number;
+    ip: string;
+    gateway?: string;
+    is_dhcp: boolean;
+    node?: string;
+}
+
