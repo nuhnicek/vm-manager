@@ -454,6 +454,22 @@ export function VMTable({
                                         {isDisconnectingLab && <span className="btn-spinner" />}
                                         {isDisconnectingLab ? 'Odpojování...' : 'Odpojit Lab'}
                                     </button>
+                                ) : (vm as any).is_vulnerable ? (
+                                    <span 
+                                        style={{ 
+                                            fontSize: '11px', 
+                                            padding: '3px 8px', 
+                                            borderRadius: '4px', 
+                                            border: '1px solid rgba(239, 68, 68, 0.35)', 
+                                            color: '#ef4444', 
+                                            background: 'rgba(239, 68, 68, 0.08)',
+                                            userSelect: 'none',
+                                            fontWeight: 500
+                                        }}
+                                        title="Zranitelné stroje nelze z bezpečnostních důvodů připojit k internetu ani laboratorní síti"
+                                    >
+                                        Izolováno
+                                    </span>
                                 ) : (
                                     <button 
                                         className="btn btn-primary btn-sm" 

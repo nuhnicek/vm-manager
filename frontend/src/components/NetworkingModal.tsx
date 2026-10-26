@@ -165,6 +165,23 @@ export function NetworkingModal({
                                     {actionLoading === 'lab_disconnect' ? 'Odpojování...' : 'Odpojit od Internetu (Lab síť)'}
                                 </button>
                             )
+                        ) : Boolean((vm as any).is_vulnerable) ? (
+                            <span 
+                                style={{ 
+                                    fontSize: '11px', 
+                                    padding: '4px 10px', 
+                                    borderRadius: '4px', 
+                                    border: '1px solid rgba(239, 68, 68, 0.35)', 
+                                    color: '#ef4444', 
+                                    background: 'rgba(239, 68, 68, 0.08)',
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    fontWeight: 500
+                                }}
+                                title="Zranitelné stroje nelze z bezpečnostních důvodů připojit k internetu ani laboratorní síti"
+                            >
+                                Izolovaný cíl (bez internetu)
+                            </span>
                         ) : (
                             onConnectLabNetwork && (
                                 <button

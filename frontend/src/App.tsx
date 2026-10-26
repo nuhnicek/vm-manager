@@ -675,6 +675,10 @@ function App() {
     const handleConnectLabNetwork = async (targetVm?: main.VM) => {
         const vmToUse = targetVm || managingConnectionsVM;
         if (!vmToUse) return;
+        if ((vmToUse as any).is_vulnerable) {
+            setMessage("Chyba: Zranitelné stroje nelze z bezpečnostních důvodů připojit k laboratorní síti (Internetu)");
+            return;
+        }
         const vmidStr = String(vmToUse.id);
         setPendingVMActions(prev => ({ ...prev, [vmidStr]: 'lab_connect' }));
         setVms(prev => prev.map(v => String(v.id) === vmidStr ? { ...v, has_internet: true } as any : v));
