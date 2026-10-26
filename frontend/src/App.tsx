@@ -648,6 +648,58 @@ function App() {
         }
     };
 
+    const handleConnectLabNetwork = async (targetVm?: main.VM) => {
+        const vmToUse = targetVm || managingConnectionsVM;
+        if (!vmToUse) return;
+        try {
+            if (typeof window !== 'undefined' && (window as any).go?.main?.App?.ConnectToLabNetwork) {
+                const result = await (window as any).go.main.App.ConnectToLabNetwork(String(vmToUse.id));
+                setMessage(result);
+            } else {
+                const vmid = parseInt(String(vmToUse.id), 10);
+                const resp = await apiFetch('/vms/network/lab-connect', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ vmid })
+                });
+                if (!resp || !resp.ok) {
+                    const errData = await resp?.json().catch(() => ({}));
+                    throw new Error(errData?.error || 'Nepodařilo se připojit k laboratorní síti');
+                }
+                setMessage(`Stroj ${vmToUse.name} byl úspěšně připojen k laboratorní síti (Internet)`);
+            }
+            triggerRefetch();
+        } catch (error: any) {
+            setMessage(`Chyba: ${error?.message || error}`);
+        }
+    };
+
+    const handleDisconnectLabNetwork = async (targetVm?: main.VM) => {
+        const vmToUse = targetVm || managingConnectionsVM;
+        if (!vmToUse) return;
+        try {
+            if (typeof window !== 'undefined' && (window as any).go?.main?.App?.DisconnectFromLabNetwork) {
+                const result = await (window as any).go.main.App.DisconnectFromLabNetwork(String(vmToUse.id));
+                setMessage(result);
+            } else {
+                const vmid = parseInt(String(vmToUse.id), 10);
+                const resp = await apiFetch('/vms/network/lab-disconnect', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ vmid })
+                });
+                if (!resp || !resp.ok) {
+                    const errData = await resp?.json().catch(() => ({}));
+                    throw new Error(errData?.error || 'Nepodařilo se odpojit od laboratorní sítě');
+                }
+                setMessage(`Stroj ${vmToUse.name} byl odpojen od laboratorní sítě`);
+            }
+            triggerRefetch();
+        } catch (error: any) {
+            setMessage(`Chyba: ${error?.message || error}`);
+        }
+    };
+
     if (launchedConsoleVM) {
         return (
             <div style={{ width: '100vw', height: '100vh', backgroundColor: '#000000' }}>
@@ -731,6 +783,8 @@ function App() {
                 onRemoveNIC={handleRemoveNIC}
                 onConnect={handleConnect}
                 onDisconnect={handleDisconnect}
+                onConnectLabNetwork={() => handleConnectLabNetwork()}
+                onDisconnectLabNetwork={() => handleDisconnectLabNetwork()}
             />
 
             <SetIPModal 
@@ -840,6 +894,8 @@ function App() {
                         onAssignVMProject={handleAssignVMToProject}
                         onSetIPClick={(vm) => setSettingIPVM(vm)}
                         onOpenCatalogClick={() => setIsCatalogModalOpen(true)}
+                        onConnectLabNetwork={(vm) => handleConnectLabNetwork(vm)}
+                        onDisconnectLabNetwork={(vm) => handleDisconnectLabNetwork(vm)}
                     />
                 </>
             )}

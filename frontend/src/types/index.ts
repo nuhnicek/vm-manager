@@ -108,6 +108,8 @@ export interface FleetVM {
     port?: number;
     exploit_hint?: string;
     exploit_doc?: string;
+    has_internet?: boolean;
+    is_attacker?: boolean;
 }
 
 export interface CatalogItem {

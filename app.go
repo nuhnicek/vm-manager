@@ -63,6 +63,8 @@ type VM struct {
 	Networks      []string       `json:"networks,omitempty"`
 	AvailableNICs []string       `json:"available_nics,omitempty"`
 	Connections   []VMConnection `json:"connections,omitempty"`
+	HasInternet   bool           `json:"has_internet"`
+	IsAttacker    bool           `json:"is_attacker"`
 }
 
 type Template struct {
@@ -793,6 +795,84 @@ func (a *App) DisconnectVMs(id1, id2 string) (string, error) {
 	}
 
 	return fmt.Sprintf("Disconnected %s and %s", vmName1, vmName2), nil
+}
+
+func (a *App) ConnectToLabNetwork(id string) (string, error) {
+	vmid, vmName, err := a.getNumericVMID(id)
+	if err != nil {
+		return "", err
+	}
+	if a.authToken == "" {
+		return "", fmt.Errorf("unauthorized: missing token")
+	}
+
+	payload := map[string]interface{}{"vmid": vmid}
+	bodyBytes, _ := json.Marshal(payload)
+	req, err := http.NewRequest("POST", a.backendURL+"/vms/network/lab-connect", bytes.NewBuffer(bodyBytes))
+	if err != nil {
+		return "", err
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", a.authToken)
+
+	client := &http.Client{Timeout: 30 * time.Second}
+	resp, err := client.Do(req)
+	if err != nil {
+		return "", fmt.Errorf("failed to connect to lab network: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		var errData struct {
+			Error string `json:"error"`
+		}
+		_ = json.NewDecoder(resp.Body).Decode(&errData)
+		if errData.Error != "" {
+			return "", fmt.Errorf("lab connect failed: %s", errData.Error)
+		}
+		return "", fmt.Errorf("failed to connect to lab network (status %d)", resp.StatusCode)
+	}
+
+	return fmt.Sprintf("Stroj %s byl připojen k laboratorní síti (Internet)", vmName), nil
+}
+
+func (a *App) DisconnectFromLabNetwork(id string) (string, error) {
+	vmid, vmName, err := a.getNumericVMID(id)
+	if err != nil {
+		return "", err
+	}
+	if a.authToken == "" {
+		return "", fmt.Errorf("unauthorized: missing token")
+	}
+
+	payload := map[string]interface{}{"vmid": vmid}
+	bodyBytes, _ := json.Marshal(payload)
+	req, err := http.NewRequest("POST", a.backendURL+"/vms/network/lab-disconnect", bytes.NewBuffer(bodyBytes))
+	if err != nil {
+		return "", err
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", a.authToken)
+
+	client := &http.Client{Timeout: 30 * time.Second}
+	resp, err := client.Do(req)
+	if err != nil {
+		return "", fmt.Errorf("failed to disconnect from lab network: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		var errData struct {
+			Error string `json:"error"`
+		}
+		_ = json.NewDecoder(resp.Body).Decode(&errData)
+		if errData.Error != "" {
+			return "", fmt.Errorf("lab disconnect failed: %s", errData.Error)
+		}
+		return "", fmt.Errorf("failed to disconnect from lab network (status %d)", resp.StatusCode)
+	}
+
+	return fmt.Sprintf("Stroj %s byl odpojen od laboratorní sítě", vmName), nil
 }
 
 func (a *App) Login(email, password string) (*AuthResult, error) {

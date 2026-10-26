@@ -3,6 +3,8 @@ import { Terminal } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import RFB from '@novnc/novnc';
 import { GetBackendURL } from '../wailsjs/go/main/App';
+import { apiFetch } from './api';
+import { ExternalVNCModal } from './components/ExternalVNCModal';
 import '@xterm/xterm/css/xterm.css';
 
 interface VMConsoleProps {
@@ -44,9 +46,119 @@ export function VMConsole({ vmId, vmName, vmNode, token, onClose, onPopOut }: VM
     const [scaleMode, setScaleMode] = useState<'fit' | '1:1'>('fit');
     const [showDotCursor, setShowDotCursor] = useState(true);
 
+    const [clipboardModalOpen, setClipboardModalOpen] = useState(false);
+    const [pasteText, setPasteText] = useState('');
+    const [toastMessage, setToastMessage] = useState<string | null>(null);
+    const [vmClipboard, setVmClipboard] = useState<string>('');
+
+    const [externalVNCModalOpen, setExternalVNCModalOpen] = useState(false);
+
     const rfbRef = useRef<any>(null);
+    const serialWSRef = useRef<WebSocket | null>(null);
     const vncContainerRef = useRef<HTMLDivElement>(null);
     const terminalRef = useRef<HTMLDivElement>(null);
+
+    const showToast = (msg: string) => {
+        setToastMessage(msg);
+        setTimeout(() => {
+            setToastMessage(prev => prev === msg ? null : prev);
+        }, 2800);
+    };
+
+    const sendStringToVNC = (rfb: any, text: string) => {
+        if (!rfb) return;
+        for (let i = 0; i < text.length; i++) {
+            const char = text[i];
+            let keysym: number;
+            let code = 'Key' + char.toUpperCase();
+            if (char === '\n' || char === '\r') {
+                keysym = 0xFF0D;
+                code = 'Enter';
+            } else if (char === '\t') {
+                keysym = 0xFF09;
+                code = 'Tab';
+            } else if (char === ' ') {
+                keysym = 0x20;
+                code = 'Space';
+            } else if (char === '\b') {
+                keysym = 0xFF08;
+                code = 'Backspace';
+            } else {
+                const codePoint = char.charCodeAt(0);
+                if (codePoint < 256) {
+                    keysym = codePoint;
+                } else {
+                    keysym = 0x01000000 | codePoint;
+                }
+            }
+            rfb.sendKey(keysym, code);
+        }
+    };
+
+    const handleDirectPaste = async () => {
+        try {
+            const text = await navigator.clipboard.readText();
+            if (!text) {
+                setClipboardModalOpen(true);
+                return;
+            }
+            if (consoleMode === 'vnc' && rfbRef.current) {
+                rfbRef.current.clipboardPasteFrom(text);
+                sendStringToVNC(rfbRef.current, text);
+                showToast(`Vloženo ${text.length} znaků do konzole`);
+            } else if (consoleMode === 'serial' && serialWSRef.current) {
+                if (serialWSRef.current.readyState === WebSocket.OPEN) {
+                    serialWSRef.current.send(text);
+                    showToast(`Vloženo ${text.length} znaků do terminálu`);
+                }
+            }
+        } catch {
+            setClipboardModalOpen(true);
+        }
+    };
+
+    const handleSendCustomText = (text: string, asKeystrokes: boolean) => {
+        if (!text) return;
+        if (consoleMode === 'vnc' && rfbRef.current) {
+            if (asKeystrokes) {
+                sendStringToVNC(rfbRef.current, text);
+                showToast(`Napsáno ${text.length} znaků do VM`);
+            } else {
+                rfbRef.current.clipboardPasteFrom(text);
+                showToast('Uloženo do schránky VM');
+            }
+        } else if (consoleMode === 'serial' && serialWSRef.current) {
+            if (serialWSRef.current.readyState === WebSocket.OPEN) {
+                serialWSRef.current.send(text);
+                showToast(`Odesláno ${text.length} znaků do terminálu`);
+            }
+        }
+        setClipboardModalOpen(false);
+        setPasteText('');
+    };
+
+    const handleCopyVMClipboard = () => {
+        if (vmClipboard) {
+            navigator.clipboard.writeText(vmClipboard);
+            showToast('Zkopírováno ze schránky VM');
+        } else {
+            showToast('Schránka VM je prázdná');
+        }
+    };
+
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if ((e.ctrlKey || e.metaKey) && (e.key === 'v' || e.key === 'V')) {
+                if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
+                    return;
+                }
+                e.preventDefault();
+                handleDirectPaste();
+            }
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [consoleMode]);
 
     useEffect(() => {
         if (consoleMode !== 'vnc' || !vncContainerRef.current) return;
@@ -80,10 +192,11 @@ export function VMConsole({ vmId, vmName, vmNode, token, onClose, onPopOut }: VM
                 rfb.resizeSession = false;
                 rfb.clipViewport = false;
                 rfb.showDotCursor = showDotCursor;
+                rfb.focusOnClick = true;
 
                 if (performanceMode === 'low-latency') {
-                    rfb.compressionLevel = 0;
-                    rfb.qualityLevel = 8;
+                    rfb.compressionLevel = 1;
+                    rfb.qualityLevel = 6;
                 } else if (performanceMode === 'balanced') {
                     rfb.compressionLevel = 2;
                     rfb.qualityLevel = 6;
@@ -117,6 +230,17 @@ export function VMConsole({ vmId, vmName, vmNode, token, onClose, onPopOut }: VM
                         rfb.sendCredentials({ password: '' });
                     }
                 });
+
+                rfb.addEventListener('clipboard', (e: any) => {
+                    if (isDisposed) return;
+                    if (e?.detail?.text) {
+                        setVmClipboard(e.detail.text);
+                        try {
+                            navigator.clipboard.writeText(e.detail.text);
+                            showToast('Schránka z VM zkopírována do počítače');
+                        } catch {}
+                    }
+                });
             } catch (err: any) {
                 if (isDisposed) return;
                 setStatus('error');
@@ -144,8 +268,8 @@ export function VMConsole({ vmId, vmName, vmNode, token, onClose, onPopOut }: VM
         setPerformanceMode(mode);
         if (rfbRef.current) {
             if (mode === 'low-latency') {
-                rfbRef.current.compressionLevel = 0;
-                rfbRef.current.qualityLevel = 8;
+                rfbRef.current.compressionLevel = 1;
+                rfbRef.current.qualityLevel = 6;
             } else if (mode === 'balanced') {
                 rfbRef.current.compressionLevel = 2;
                 rfbRef.current.qualityLevel = 6;
@@ -228,6 +352,7 @@ export function VMConsole({ vmId, vmName, vmNode, token, onClose, onPopOut }: VM
                 const wsUrl = await resolveWebSocketUrl(vmId, token, 'ws', vmNode);
                 ws = new WebSocket(wsUrl);
                 ws.binaryType = 'arraybuffer';
+                serialWSRef.current = ws;
 
                 ws.onopen = () => {
                     if (isDisposed) return;
@@ -265,6 +390,23 @@ export function VMConsole({ vmId, vmName, vmNode, token, onClose, onPopOut }: VM
                         ws.send(data);
                     }
                 });
+
+                term.attachCustomKeyEventHandler((e) => {
+                    if ((e.ctrlKey || e.metaKey) && (e.key === 'v' || e.key === 'V') && e.type === 'keydown') {
+                        handleDirectPaste();
+                        return false;
+                    }
+                    return true;
+                });
+
+                term.onSelectionChange(() => {
+                    const sel = term.getSelection();
+                    if (sel) {
+                        try {
+                            navigator.clipboard.writeText(sel);
+                        } catch {}
+                    }
+                });
             } catch (err: any) {
                 if (isDisposed) return;
                 setStatus('error');
@@ -285,6 +427,7 @@ export function VMConsole({ vmId, vmName, vmNode, token, onClose, onPopOut }: VM
         return () => {
             isDisposed = true;
             window.removeEventListener('resize', handleResize);
+            serialWSRef.current = null;
             if (ws) {
                 try {
                     ws.close();
@@ -371,6 +514,44 @@ export function VMConsole({ vmId, vmName, vmNode, token, onClose, onPopOut }: VM
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <button
                         type="button"
+                        onClick={handleDirectPaste}
+                        className="btn btn-secondary btn-sm"
+                        style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                        title="Vložit text ze schránky vašeho počítače do konzole (Ctrl+V)"
+                    >
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path>
+                            <rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect>
+                        </svg>
+                        <span>Vložit</span>
+                    </button>
+
+                    <button
+                        type="button"
+                        onClick={() => setClipboardModalOpen(true)}
+                        className="btn btn-secondary btn-sm"
+                        title="Otevřít textové pole pro vložení / psaní delšího textu či hesel"
+                    >
+                        Schránka & Psaní
+                    </button>
+
+                    <button
+                        type="button"
+                        onClick={() => setExternalVNCModalOpen(true)}
+                        className="btn btn-secondary btn-sm"
+                        style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', borderColor: 'rgba(56, 189, 248, 0.4)' }}
+                        title="Získat port a konfigurační soubor pro nativní VNC klienty (TigerVNC, RealVNC, Remmina)"
+                    >
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+                            <line x1="8" y1="21" x2="16" y2="21"></line>
+                            <line x1="12" y1="17" x2="12" y2="21"></line>
+                        </svg>
+                        <span>VNC Klient</span>
+                    </button>
+
+                    <button
+                        type="button"
                         onClick={() => setConnectAttempt(prev => prev + 1)}
                         className="btn btn-secondary btn-sm"
                         title="Znovu připojit ke konzoli"
@@ -428,7 +609,7 @@ export function VMConsole({ vmId, vmName, vmNode, token, onClose, onPopOut }: VM
                                 onClick={() => handlePerformanceModeChange('low-latency')}
                                 className={`btn btn-sm ${performanceMode === 'low-latency' ? 'btn-primary' : 'btn-secondary'}`}
                                 style={{ fontSize: '11px', padding: '2px 8px', border: 'none' }}
-                                title="Nízká latence a minimální komprese pro plynulý obraz na rychlé síti"
+                                title="Nízká latence pro plynulý obraz s hardwarovým blittingem"
                             >
                                 Nízká latence
                             </button>
@@ -497,6 +678,28 @@ export function VMConsole({ vmId, vmName, vmNode, token, onClose, onPopOut }: VM
                     </div>
 
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                        <span style={{ color: 'var(--text-muted)', fontWeight: 600 }}>SCHRÁNKA:</span>
+                        <button
+                            type="button"
+                            onClick={handleDirectPaste}
+                            className="btn btn-secondary btn-sm"
+                            style={{ fontSize: '11px', padding: '2px 8px' }}
+                            title="Vložit schránku do VM jako stisky kláves"
+                        >
+                            Vložit (Ctrl+V)
+                        </button>
+                        <button
+                            type="button"
+                            onClick={handleCopyVMClipboard}
+                            className="btn btn-secondary btn-sm"
+                            style={{ fontSize: '11px', padding: '2px 8px' }}
+                            title="Zkopírovat schránku z VM do vašeho počítače"
+                        >
+                            Kopírovat z VM
+                        </button>
+
+                        <div style={{ width: '1px', height: '16px', backgroundColor: 'var(--border-color)', margin: '0 4px' }} />
+
                         <span style={{ color: 'var(--text-muted)', fontWeight: 600 }}>KLÁVESY:</span>
                         <button
                             type="button"
@@ -541,9 +744,10 @@ export function VMConsole({ vmId, vmName, vmNode, token, onClose, onPopOut }: VM
             <div style={{ flex: 1, position: 'relative', overflow: 'hidden', backgroundColor: '#000000' }}>
                 <style>{`
                     .vnc-screen-viewport canvas {
-                        image-rendering: -webkit-optimize-contrast;
+                        image-rendering: pixelated;
+                        image-rendering: -moz-crisp-edges;
                         image-rendering: crisp-edges;
-                        transform: translateZ(0);
+                        transform: translate3d(0, 0, 0);
                         backface-visibility: hidden;
                         will-change: transform;
                     }
@@ -579,6 +783,127 @@ export function VMConsole({ vmId, vmName, vmNode, token, onClose, onPopOut }: VM
                     }}
                 />
             </div>
+
+            {clipboardModalOpen && (
+                <div className="modal-backdrop" style={{ zIndex: 100000 }}>
+                    <div className="modal-content" style={{ maxWidth: '520px', width: '92%' }}>
+                        <div className="modal-header">
+                            <div>
+                                <h3 className="modal-title">Vložit text do konzole</h3>
+                                <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: 'var(--text-muted)' }}>
+                                    Odeslání textu, hesel nebo skriptů do virtuálního stroje
+                                </p>
+                            </div>
+                            <button
+                                type="button"
+                                className="close-button"
+                                onClick={() => {
+                                    setClipboardModalOpen(false);
+                                    setPasteText('');
+                                }}
+                            >
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                                </svg>
+                            </button>
+                        </div>
+
+                        <div style={{ padding: '20px 24px' }}>
+                            <textarea
+                                value={pasteText}
+                                onChange={e => setPasteText(e.target.value)}
+                                placeholder="Vložte sem text, příkaz nebo heslo k odeslání do stroje..."
+                                rows={6}
+                                style={{
+                                    width: '100%',
+                                    padding: '10px 12px',
+                                    fontFamily: 'monospace',
+                                    fontSize: '13px',
+                                    backgroundColor: 'var(--bg-secondary)',
+                                    border: '1px solid var(--border-color)',
+                                    borderRadius: '6px',
+                                    color: 'var(--text-main)',
+                                    resize: 'vertical',
+                                    marginBottom: '14px',
+                                    boxSizing: 'border-box'
+                                }}
+                                autoFocus
+                            />
+
+                            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                                <button
+                                    type="button"
+                                    className="btn btn-primary"
+                                    onClick={() => handleSendCustomText(pasteText, true)}
+                                    disabled={!pasteText.trim()}
+                                    style={{ fontSize: '12px', flex: 1, minWidth: '160px' }}
+                                    title="Vepíše text jako virtuální stisky kláves (funguje v každém Linux shellu i konzoli)"
+                                >
+                                    Napsat do konzole (klávesnice)
+                                </button>
+                                {consoleMode === 'vnc' && (
+                                    <button
+                                        type="button"
+                                        className="btn btn-secondary"
+                                        onClick={() => handleSendCustomText(pasteText, false)}
+                                        disabled={!pasteText.trim()}
+                                        style={{ fontSize: '12px', flex: 1, minWidth: '160px' }}
+                                        title="Nastaví text do schránky grafického systému VM (pro Ctrl+V v GUI)"
+                                    >
+                                        Uložit do schránky VM
+                                    </button>
+                                )}
+                            </div>
+
+                            <div className="modal-actions" style={{ marginTop: '16px' }}>
+                                <button
+                                    type="button"
+                                    className="btn btn-secondary"
+                                    onClick={() => {
+                                        setClipboardModalOpen(false);
+                                        setPasteText('');
+                                    }}
+                                >
+                                    Zrušit
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            <ExternalVNCModal
+                isOpen={externalVNCModalOpen}
+                vmId={vmId!}
+                vmName={vmName}
+                vmNode={vmNode}
+                onClose={() => setExternalVNCModalOpen(false)}
+            />
+
+            {toastMessage && (
+                <div style={{
+                    position: 'fixed',
+                    bottom: '24px',
+                    right: '24px',
+                    backgroundColor: 'rgba(15, 23, 42, 0.95)',
+                    color: '#f8fafc',
+                    padding: '10px 16px',
+                    borderRadius: '8px',
+                    border: '1px solid rgba(56, 189, 248, 0.4)',
+                    boxShadow: '0 10px 25px rgba(0,0,0,0.5)',
+                    fontSize: '13px',
+                    fontWeight: 500,
+                    zIndex: 100001,
+                    pointerEvents: 'none',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px'
+                }}>
+                    <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#38bdf8' }} />
+                    <span>{toastMessage}</span>
+                </div>
+            )}
         </div>
     );
 }

@@ -6,6 +6,10 @@ export function AddNIC(arg1) {
   return window['go']['main']['App']['AddNIC'](arg1);
 }
 
+export function ConnectToLabNetwork(arg1) {
+  return window['go']['main']['App']['ConnectToLabNetwork'](arg1);
+}
+
 export function ConnectVMs(arg1, arg2, arg3, arg4) {
   return window['go']['main']['App']['ConnectVMs'](arg1, arg2, arg3, arg4);
 }
@@ -20,6 +24,10 @@ export function CreateVMOnNode(arg1, arg2, arg3) {
 
 export function DeleteVM(arg1) {
   return window['go']['main']['App']['DeleteVM'](arg1);
+}
+
+export function DisconnectFromLabNetwork(arg1) {
+  return window['go']['main']['App']['DisconnectFromLabNetwork'](arg1);
 }
 
 export function DisconnectVMs(arg1, arg2) {

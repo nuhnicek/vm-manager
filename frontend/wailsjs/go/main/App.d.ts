@@ -4,6 +4,8 @@ import {main} from '../models';
 
 export function AddNIC(arg1:string):Promise<string>;
 
+export function ConnectToLabNetwork(arg1:string):Promise<string>;
+
 export function ConnectVMs(arg1:string,arg2:string,arg3:string,arg4:string):Promise<string>;
 
 export function CreateVMFromTemplate(arg1:string,arg2:string):Promise<main.VM>;
@@ -11,6 +13,8 @@ export function CreateVMFromTemplate(arg1:string,arg2:string):Promise<main.VM>;
 export function CreateVMOnNode(arg1:string,arg2:string,arg3:string):Promise<main.VM>;
 
 export function DeleteVM(arg1:string):Promise<string>;
+
+export function DisconnectFromLabNetwork(arg1:string):Promise<string>;
 
 export function DisconnectVMs(arg1:string,arg2:string):Promise<string>;
 

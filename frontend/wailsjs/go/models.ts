@@ -99,6 +99,8 @@ export namespace main {
 	    networks?: string[];
 	    available_nics?: string[];
 	    connections?: VMConnection[];
+	    has_internet: boolean;
+	    is_attacker: boolean;
 	
 	    static createFrom(source: any = {}) {
 	        return new VM(source);
@@ -130,6 +132,8 @@ export namespace main {
 	        this.networks = source["networks"];
 	        this.available_nics = source["available_nics"];
 	        this.connections = this.convertValues(source["connections"], VMConnection);
+	        this.has_internet = source["has_internet"];
+	        this.is_attacker = source["is_attacker"];
 	    }
 	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {

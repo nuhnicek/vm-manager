@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react';
 import { main } from '../../wailsjs/go/models';
 import { Project } from '../types';
 import { MoveVMToProjectModal } from './MoveVMToProjectModal';
+import { ExternalVNCModal } from './ExternalVNCModal';
 
 interface VMTableProps {
     vms: main.VM[];
@@ -24,6 +25,8 @@ interface VMTableProps {
     onCreateVMClick?: () => void;
     onSetIPClick?: (vm: main.VM) => void;
     onOpenCatalogClick?: () => void;
+    onConnectLabNetwork?: (vm: main.VM) => void;
+    onDisconnectLabNetwork?: (vm: main.VM) => void;
 }
 
 export function VMTable({
@@ -47,6 +50,8 @@ export function VMTable({
     onCreateVMClick,
     onSetIPClick,
     onOpenCatalogClick,
+    onConnectLabNetwork,
+    onDisconnectLabNetwork,
 }: VMTableProps) {
     const isTeacher = userRole === 'teacher';
     const [searchQuery, setSearchQuery] = useState('');
@@ -55,6 +60,7 @@ export function VMTable({
     const [selectedCVEVM, setSelectedCVEVM] = useState<main.VM | null>(null);
     const [copiedCmd, setCopiedCmd] = useState(false);
     const [typeFilter, setTypeFilter] = useState<'all' | 'qemu' | 'lxc' | 'cve' | 'vulnerable'>('all');
+    const [externalVNCVM, setExternalVNCVM] = useState<main.VM | null>(null);
 
     const activeProject = useMemo(() => {
         if (!selectedProjectId || selectedProjectId === 'all' || selectedProjectId === 'none') {
@@ -229,6 +235,30 @@ export function VMTable({
                                     {(vm as any).cvss}
                                 </span>
                             )}
+                            {(vm as any).is_attacker && (
+                                <span style={{
+                                    fontSize: '10px',
+                                    fontWeight: 700,
+                                    padding: '2px 6px',
+                                    borderRadius: '4px',
+                                    background: 'rgba(249, 115, 22, 0.15)',
+                                    color: '#f97316'
+                                }}>
+                                    ÚTOČNÍK
+                                </span>
+                            )}
+                            {(vm as any).has_internet && (
+                                <span style={{
+                                    fontSize: '10px',
+                                    fontWeight: 700,
+                                    padding: '2px 6px',
+                                    borderRadius: '4px',
+                                    background: 'rgba(16, 185, 129, 0.15)',
+                                    color: '#10b981'
+                                }}>
+                                    INTERNET
+                                </span>
+                            )}
                         </div>
                     </td>
                     <td>
@@ -340,17 +370,23 @@ export function VMTable({
                         )}
                     </td>
                     <td>
-                        {vm.connections && vm.connections.length > 0 ? (
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
-                                {vm.connections.map((conn, idx) => (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                            {(vm as any).has_internet && (
+                                <span style={{ fontSize: '11px', color: '#10b981', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                    <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#10b981', flexShrink: 0 }}></span>
+                                    <span>Lab Síť (Internet)</span>
+                                </span>
+                            )}
+                            {vm.connections && vm.connections.length > 0 ? (
+                                vm.connections.map((conn, idx) => (
                                     <span key={idx} style={{ fontSize: '11px', fontFamily: 'monospace', color: 'var(--text-muted)' }}>
                                         &rarr; VM {conn.target_vm_id} ({conn.local_nic} &harr; {conn.target_nic})
                                     </span>
-                                ))}
-                            </div>
-                        ) : (
-                            <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Bez propojení</span>
-                        )}
+                                ))
+                            ) : !(vm as any).has_internet ? (
+                                <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Bez propojení</span>
+                            ) : null}
+                        </div>
                     </td>
                     <td>
                         <div className="action-buttons">
@@ -377,12 +413,48 @@ export function VMTable({
                                 Konzole
                             </button>
 
+                            {isRunning && (
+                                <button 
+                                    className="btn btn-secondary btn-sm" 
+                                    onClick={() => setExternalVNCVM(vm)}
+                                    title="Připojit se přes externí VNC klient"
+                                >
+                                    VNC Klient
+                                </button>
+                            )}
+
                             <button 
                                 className="btn btn-secondary btn-sm" 
                                 onClick={() => onManageNetworking(vm)}
                             >
                                 Síť
                             </button>
+
+                            {onConnectLabNetwork && onDisconnectLabNetwork && (
+                                (vm as any).has_internet ? (
+                                    <button 
+                                        className="btn btn-secondary btn-sm" 
+                                        onClick={() => onDisconnectLabNetwork(vm)}
+                                        title="Odpojit od laboratorní sítě (Internet)"
+                                        style={{ fontSize: '11px', borderColor: 'rgba(239, 68, 68, 0.4)' }}
+                                    >
+                                        Odpojit Lab
+                                    </button>
+                                ) : (
+                                    <button 
+                                        className="btn btn-primary btn-sm" 
+                                        onClick={() => onConnectLabNetwork(vm)}
+                                        title="Připojit stroj k laboratorní síti s internetem pro stahování balíčků a nástrojů"
+                                        style={{
+                                            fontSize: '11px',
+                                            background: (vm as any).is_attacker ? '#f97316' : undefined,
+                                            borderColor: (vm as any).is_attacker ? '#f97316' : undefined
+                                        }}
+                                    >
+                                        Připojit Lab Síť
+                                    </button>
+                                )
+                            )}
 
                             {onSetIPClick && (
                                 <button 
@@ -444,6 +516,16 @@ export function VMTable({
                             onCreateProjectClick();
                         }
                     }}
+                />
+            )}
+
+            {externalVNCVM && (
+                <ExternalVNCModal
+                    isOpen={externalVNCVM !== null}
+                    vmId={externalVNCVM.id}
+                    vmName={externalVNCVM.name}
+                    vmNode={(externalVNCVM as any).node}
+                    onClose={() => setExternalVNCVM(null)}
                 />
             )}
 
