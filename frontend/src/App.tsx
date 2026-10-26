@@ -205,6 +205,11 @@ function App() {
                 }
             }
             setVms(data || []);
+            setManagingConnectionsVM(prev => {
+                if (!prev) return null;
+                const found = (data || []).find((v: any) => String(v.id) === String(prev.id));
+                return found || prev;
+            });
         } catch (err) {
             console.error('Failed to fetch VMs:', err);
         } finally {
@@ -668,6 +673,12 @@ function App() {
                 }
                 setMessage(`Stroj ${vmToUse.name} byl úspěšně připojen k laboratorní síti (Internet)`);
             }
+            if (managingConnectionsVM && String(managingConnectionsVM.id) === String(vmToUse.id)) {
+                setManagingConnectionsVM({
+                    ...managingConnectionsVM,
+                    has_internet: true
+                } as any);
+            }
             triggerRefetch();
         } catch (error: any) {
             setMessage(`Chyba: ${error?.message || error}`);
@@ -693,6 +704,17 @@ function App() {
                     throw new Error(errData?.error || 'Nepodařilo se odpojit od laboratorní sítě');
                 }
                 setMessage(`Stroj ${vmToUse.name} byl odpojen od laboratorní sítě`);
+            }
+            if (managingConnectionsVM && String(managingConnectionsVM.id) === String(vmToUse.id)) {
+                setManagingConnectionsVM({
+                    ...managingConnectionsVM,
+                    has_internet: false,
+                    networks: (managingConnectionsVM.networks || []).filter(n => n.includes('tag=') && !n.includes('tag=4094')),
+                    available_nics: (managingConnectionsVM.available_nics || []).filter(nic => {
+                        const desc = (managingConnectionsVM.networks || []).find(n => n.startsWith(nic + ':'));
+                        return desc && desc.includes('tag=') && !desc.includes('tag=4094');
+                    })
+                } as any);
             }
             triggerRefetch();
         } catch (error: any) {
