@@ -603,21 +603,32 @@ function App() {
         }
     };
 
-    const handleDisconnect = async (localNic: string) => {
+    const handleDisconnect = async (targetVmId: string, localNic?: string, targetNic?: string) => {
         if (!managingConnectionsVM) return;
         try {
             if (typeof window !== 'undefined' && (window as any).go?.main?.App?.DisconnectVMs) {
-                const result = await DisconnectVMs(String(managingConnectionsVM.id), localNic);
+                const result = await DisconnectVMs(String(managingConnectionsVM.id), targetVmId);
                 setMessage(result);
             } else {
                 const vmid = parseInt(String(managingConnectionsVM.id), 10);
+                const targetId = parseInt(targetVmId, 10);
                 const resp = await apiFetch('/vms/network/disconnect', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ vmid, nic: localNic })
+                    body: JSON.stringify({
+                        vmid1: vmid,
+                        vmid2: targetId,
+                        vmid: vmid,
+                        target_vm_id: targetId,
+                        nic: localNic,
+                        target_nic: targetNic
+                    })
                 });
-                if (!resp || !resp.ok) throw new Error('Nepodařilo se odpojit síť');
-                setMessage(`Rozhraní ${localNic} bylo odpojeno`);
+                if (!resp || !resp.ok) {
+                    const errData = await resp?.json().catch(() => ({}));
+                    throw new Error(errData?.error || 'Nepodařilo se odpojit síť');
+                }
+                setMessage('Propojení bylo úspěšně odpojeno');
             }
             triggerRefetch();
         } catch (error: any) {

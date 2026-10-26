@@ -42,10 +42,16 @@ type VM struct {
 	ID            uint64         `json:"id"`
 	UUID          string         `json:"uuid,omitempty"`
 	Name          string         `json:"name"`
+	Type          string         `json:"type,omitempty"`
 	Status        string         `json:"status,omitempty"`
 	RAM           int            `json:"ram_mb,omitempty"`
 	Node          string         `json:"node,omitempty"`
 	Owner         string         `json:"owner,omitempty"`
+	IPAddress     string         `json:"ip_address,omitempty"`
+	ConfiguredIP  string         `json:"configured_ip,omitempty"`
+	Gateway       string         `json:"gateway,omitempty"`
+	IsVulnerable  bool           `json:"is_vulnerable,omitempty"`
+	Category      string         `json:"category,omitempty"`
 	ProjectID     string         `json:"project_id,omitempty"`
 	ProjectName   string         `json:"project_name,omitempty"`
 	ProjectColor  string         `json:"project_color,omitempty"`
@@ -749,9 +755,11 @@ func (a *App) DisconnectVMs(id1, id2 string) (string, error) {
 		return "", fmt.Errorf("unauthorized: missing token")
 	}
 
-	payload := map[string]int{
-		"vmid1": vmid1,
-		"vmid2": vmid2,
+	payload := map[string]interface{}{
+		"vmid1":        vmid1,
+		"vmid2":        vmid2,
+		"vmid":         vmid1,
+		"target_vm_id": vmid2,
 	}
 	bodyBytes, _ := json.Marshal(payload)
 	req, err := http.NewRequest("POST", a.backendURL+"/vms/network/disconnect", bytes.NewBuffer(bodyBytes))

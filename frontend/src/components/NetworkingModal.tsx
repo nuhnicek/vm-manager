@@ -8,7 +8,7 @@ interface NetworkingModalProps {
     onAddNIC: () => void;
     onRemoveNIC: (nic: string) => void;
     onConnect: (localNic: string, targetVmId: string, targetNic: string) => void;
-    onDisconnect: (targetVmId: string) => void;
+    onDisconnect: (targetVmId: string, localNic?: string, targetNic?: string) => void;
 }
 
 export function NetworkingModal({
@@ -129,7 +129,7 @@ export function NetworkingModal({
                                             <span style={{ margin: '0 8px', color: 'var(--text-muted)' }}>&lt;----&gt;</span> 
                                             [<code>{conn.target_nic}</code>] <strong>{cVm ? cVm.name : conn.target_vm_id}</strong>
                                         </div>
-                                        <button className="btn btn-sm btn-danger" onClick={() => onDisconnect(String(conn.target_vm_id))}>Odpojit</button>
+                                        <button className="btn btn-sm btn-danger" onClick={() => onDisconnect(String(conn.target_vm_id), conn.local_nic, conn.target_nic)}>Odpojit</button>
                                     </li>
                                 );
                             })}
