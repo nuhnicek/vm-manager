@@ -24,7 +24,7 @@ export function CatalogModal({
     const isTeacher = userRole === 'teacher';
     const [catalogItems, setCatalogItems] = useState<CatalogItem[]>([]);
     const [isLoadingCatalog, setIsLoadingCatalog] = useState(false);
-    const [activeTab, setActiveTab] = useState<'all' | 'lxc' | 'vuln' | 'sec'>('all');
+    const [activeTab, setActiveTab] = useState<'all' | 'lxc' | 'cve' | 'vuln' | 'sec'>('all');
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedItem, setSelectedItem] = useState<CatalogItem | null>(null);
 
@@ -70,6 +70,7 @@ export function CatalogModal({
     const filteredItems = useMemo(() => {
         return catalogItems.filter(item => {
             if (activeTab === 'lxc' && item.type !== 'lxc') return false;
+            if (activeTab === 'cve' && !item.cve_id && item.category !== 'Zranitelné cíle (CVE)') return false;
             if (activeTab === 'vuln' && !item.is_vulnerable) return false;
             if (activeTab === 'sec' && item.category !== 'Bezpečnostní nástroje') return false;
 
@@ -78,7 +79,9 @@ export function CatalogModal({
                 const matchName = item.name.toLowerCase().includes(q);
                 const matchDesc = item.description.toLowerCase().includes(q);
                 const matchCat = item.category.toLowerCase().includes(q);
-                if (!matchName && !matchDesc && !matchCat) return false;
+                const matchCVE = item.cve_id ? item.cve_id.toLowerCase().includes(q) : false;
+                const matchHint = item.exploit_hint ? item.exploit_hint.toLowerCase().includes(q) : false;
+                if (!matchName && !matchDesc && !matchCat && !matchCVE && !matchHint) return false;
             }
             return true;
         });
@@ -96,7 +99,7 @@ export function CatalogModal({
         setIsDHCP(true);
         setIp('');
         setGateway('10.0.10.1');
-        setRootPassword('Lab411Admin!');
+        setRootPassword(item.is_vulnerable ? 'toor' : 'Lab411Admin!');
         if (selectedProjectId && selectedProjectId !== 'all' && selectedProjectId !== 'none') {
             setAssignedProjectId(selectedProjectId);
         } else {
@@ -224,6 +227,14 @@ export function CatalogModal({
                                 </button>
                                 <button
                                     type="button"
+                                    onClick={() => setActiveTab('cve')}
+                                    className={`btn ${activeTab === 'cve' ? 'btn-primary' : 'btn-secondary'}`}
+                                    style={{ fontSize: '12px', padding: '6px 12px' }}
+                                >
+                                    Zranitelná CVE (Vulhub)
+                                </button>
+                                <button
+                                    type="button"
                                     onClick={() => setActiveTab('lxc')}
                                     className={`btn ${activeTab === 'lxc' ? 'btn-primary' : 'btn-secondary'}`}
                                     style={{ fontSize: '12px', padding: '6px 12px' }}
@@ -236,7 +247,7 @@ export function CatalogModal({
                                     className={`btn ${activeTab === 'vuln' ? 'btn-primary' : 'btn-secondary'}`}
                                     style={{ fontSize: '12px', padding: '6px 12px' }}
                                 >
-                                    Zranitelné cíle (Security)
+                                    Zranitelné cíle
                                 </button>
                                 <button
                                     type="button"
@@ -252,7 +263,7 @@ export function CatalogModal({
                                     type="text"
                                     value={searchQuery}
                                     onChange={e => setSearchQuery(e.target.value)}
-                                    placeholder="Hledat v katalogu (např. alpine, metasploit)..."
+                                    placeholder="Hledat v katalogu (např. CVE-2021, php2shell, apache)..."
                                     style={{ width: '100%', padding: '6px 12px', fontSize: '13px' }}
                                 />
                             </div>
@@ -292,30 +303,56 @@ export function CatalogModal({
                                             }}
                                         >
                                             <div>
-                                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', marginBottom: '8px' }}>
-                                                    <span style={{
-                                                        fontSize: '10px',
-                                                        fontWeight: 700,
-                                                        letterSpacing: '0.05em',
-                                                        padding: '3px 8px',
-                                                        borderRadius: '4px',
-                                                        background: isLXC ? 'rgba(59, 130, 246, 0.15)' : 'rgba(168, 85, 247, 0.15)',
-                                                        color: isLXC ? '#3b82f6' : '#a855f7'
-                                                    }}>
-                                                        {isLXC ? 'LXC KONTEJNER' : 'QEMU VM'}
-                                                    </span>
-
-                                                    {item.is_vulnerable && (
+                                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', marginBottom: '8px', flexWrap: 'wrap' }}>
+                                                    <div style={{ display: 'flex', gap: '4px', alignItems: 'center', flexWrap: 'wrap' }}>
                                                         <span style={{
                                                             fontSize: '10px',
                                                             fontWeight: 700,
                                                             letterSpacing: '0.05em',
                                                             padding: '3px 8px',
                                                             borderRadius: '4px',
-                                                            background: 'rgba(239, 68, 68, 0.15)',
-                                                            color: '#ef4444'
+                                                            background: isLXC ? 'rgba(59, 130, 246, 0.15)' : 'rgba(168, 85, 247, 0.15)',
+                                                            color: isLXC ? '#3b82f6' : '#a855f7'
                                                         }}>
-                                                            ZRANITELNÝ CÍL
+                                                            {isLXC ? 'LXC KONTEJNER' : 'QEMU VM'}
+                                                        </span>
+
+                                                        {item.cve_id && (
+                                                            <span style={{
+                                                                fontSize: '10px',
+                                                                fontWeight: 700,
+                                                                letterSpacing: '0.05em',
+                                                                padding: '3px 8px',
+                                                                borderRadius: '4px',
+                                                                background: 'rgba(239, 68, 68, 0.15)',
+                                                                color: '#ef4444'
+                                                            }}>
+                                                                {item.cve_id}
+                                                            </span>
+                                                        )}
+
+                                                        {item.cvss && (
+                                                            <span style={{
+                                                                fontSize: '10px',
+                                                                fontWeight: 700,
+                                                                letterSpacing: '0.05em',
+                                                                padding: '3px 8px',
+                                                                borderRadius: '4px',
+                                                                background: 'rgba(245, 158, 11, 0.15)',
+                                                                color: '#f59e0b'
+                                                            }}>
+                                                                {item.cvss}
+                                                            </span>
+                                                        )}
+                                                    </div>
+
+                                                    {item.port && (
+                                                        <span style={{
+                                                            fontSize: '11px',
+                                                            fontFamily: 'monospace',
+                                                            color: 'var(--text-muted)'
+                                                        }}>
+                                                            Port {item.port}
                                                         </span>
                                                     )}
                                                 </div>
@@ -406,6 +443,30 @@ export function CatalogModal({
                                 {selectedItem.type === 'lxc' ? 'LXC Kontejner' : 'QEMU Virtuální stroj'}
                             </span>
                         </div>
+
+                        {selectedItem.cve_id && (
+                            <div style={{
+                                background: 'rgba(239, 68, 68, 0.08)',
+                                border: '1px solid rgba(239, 68, 68, 0.25)',
+                                borderRadius: '8px',
+                                padding: '10px 14px',
+                                marginBottom: '14px',
+                                fontSize: '12px'
+                            }}>
+                                <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '4px' }}>
+                                    <span style={{ fontWeight: 700, color: '#ef4444' }}>{selectedItem.cve_id}</span>
+                                    {selectedItem.cvss && (
+                                        <span style={{ color: '#f59e0b', fontWeight: 600 }}>{selectedItem.cvss}</span>
+                                    )}
+                                    {selectedItem.port && (
+                                        <span style={{ fontFamily: 'monospace', color: 'var(--text-muted)' }}>Port {selectedItem.port}</span>
+                                    )}
+                                </div>
+                                <div style={{ color: 'var(--text-muted)', lineHeight: 1.4 }}>
+                                    {selectedItem.description}
+                                </div>
+                            </div>
+                        )}
 
                         <div className="form-group" style={{ marginBottom: '14px' }}>
                             <label style={{ fontWeight: 600 }}>Název nového stroje:</label>

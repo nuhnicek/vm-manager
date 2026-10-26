@@ -88,6 +88,11 @@ export namespace main {
 	    gateway?: string;
 	    is_vulnerable?: boolean;
 	    category?: string;
+	    cve_id?: string;
+	    cvss?: string;
+	    port?: number;
+	    exploit_hint?: string;
+	    exploit_doc?: string;
 	    project_id?: string;
 	    project_name?: string;
 	    project_color?: string;
@@ -114,6 +119,11 @@ export namespace main {
 	        this.gateway = source["gateway"];
 	        this.is_vulnerable = source["is_vulnerable"];
 	        this.category = source["category"];
+	        this.cve_id = source["cve_id"];
+	        this.cvss = source["cvss"];
+	        this.port = source["port"];
+	        this.exploit_hint = source["exploit_hint"];
+	        this.exploit_doc = source["exploit_doc"];
 	        this.project_id = source["project_id"];
 	        this.project_name = source["project_name"];
 	        this.project_color = source["project_color"];

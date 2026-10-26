@@ -52,7 +52,9 @@ export function VMTable({
     const [searchQuery, setSearchQuery] = useState('');
     const [isGroupedView, setIsGroupedView] = useState(false);
     const [movingVM, setMovingVM] = useState<main.VM | null>(null);
-    const [typeFilter, setTypeFilter] = useState<'all' | 'qemu' | 'lxc' | 'vulnerable'>('all');
+    const [selectedCVEVM, setSelectedCVEVM] = useState<main.VM | null>(null);
+    const [copiedCmd, setCopiedCmd] = useState(false);
+    const [typeFilter, setTypeFilter] = useState<'all' | 'qemu' | 'lxc' | 'cve' | 'vulnerable'>('all');
 
     const activeProject = useMemo(() => {
         if (!selectedProjectId || selectedProjectId === 'all' || selectedProjectId === 'none') {
@@ -87,12 +89,14 @@ export function VMTable({
         return vms.filter(vm => {
             if (typeFilter === 'lxc' && vm.type !== 'lxc') return false;
             if (typeFilter === 'qemu' && vm.type === 'lxc') return false;
+            if (typeFilter === 'cve' && !(vm as any).cve_id && !vm.is_vulnerable) return false;
             if (typeFilter === 'vulnerable' && !vm.is_vulnerable) return false;
 
             const matchesSearch = 
                 !searchQuery.trim() ||
                 vm.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
                 String(vm.id).includes(searchQuery) ||
+                ((vm as any).cve_id && (vm as any).cve_id.toLowerCase().includes(searchQuery.toLowerCase())) ||
                 ((vm as any).node && (vm as any).node.toLowerCase().includes(searchQuery.toLowerCase())) ||
                 ((vm as any).ip_address && (vm as any).ip_address.toLowerCase().includes(searchQuery.toLowerCase())) ||
                 ((vm as any).configured_ip && (vm as any).configured_ip.toLowerCase().includes(searchQuery.toLowerCase())) ||
@@ -171,7 +175,7 @@ export function VMTable({
                         </span>
                     </td>
                     <td>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
                             <span className="fw-500">{vm.name}</span>
                             <span style={{
                                 fontSize: '10px',
@@ -183,7 +187,25 @@ export function VMTable({
                             }}>
                                 {isLXC ? 'LXC' : 'VM'}
                             </span>
-                            {vm.is_vulnerable && (
+                            {(vm as any).cve_id ? (
+                                <button
+                                    type="button"
+                                    onClick={() => setSelectedCVEVM(vm)}
+                                    title="Zobrazit detail zranitelnosti a návod"
+                                    style={{
+                                        border: 'none',
+                                        cursor: 'pointer',
+                                        fontSize: '10px',
+                                        fontWeight: 700,
+                                        padding: '2px 6px',
+                                        borderRadius: '4px',
+                                        background: 'rgba(239, 68, 68, 0.15)',
+                                        color: '#ef4444'
+                                    }}
+                                >
+                                    {(vm as any).cve_id}
+                                </button>
+                            ) : vm.is_vulnerable ? (
                                 <span style={{
                                     fontSize: '10px',
                                     fontWeight: 700,
@@ -193,6 +215,18 @@ export function VMTable({
                                     color: '#ef4444'
                                 }}>
                                     ZRANITELNÝ
+                                </span>
+                            ) : null}
+                            {(vm as any).cvss && (
+                                <span style={{
+                                    fontSize: '10px',
+                                    fontWeight: 700,
+                                    padding: '2px 6px',
+                                    borderRadius: '4px',
+                                    background: 'rgba(245, 158, 11, 0.15)',
+                                    color: '#f59e0b'
+                                }}>
+                                    {(vm as any).cvss}
                                 </span>
                             )}
                         </div>
@@ -360,6 +394,17 @@ export function VMTable({
                                 </button>
                             )}
 
+                            {((vm as any).cve_id || vm.is_vulnerable) && (
+                                <button 
+                                    className="btn btn-secondary btn-sm" 
+                                    onClick={() => setSelectedCVEVM(vm)}
+                                    title="Zobrazit detail CVE a návod"
+                                    style={{ borderColor: 'rgba(239, 68, 68, 0.5)', color: '#ef4444' }}
+                                >
+                                    CVE Návod
+                                </button>
+                            )}
+
                             <button 
                                 className="btn btn-secondary btn-sm" 
                                 onClick={() => setMovingVM(vm)}
@@ -400,6 +445,183 @@ export function VMTable({
                         }
                     }}
                 />
+            )}
+
+            {selectedCVEVM && (
+                <div className="modal-backdrop">
+                    <div className="modal-content" style={{ maxWidth: '640px', width: '92%' }}>
+                        <div className="modal-header">
+                            <div>
+                                <h3 className="modal-title">
+                                    CVE Laboratoř: {(selectedCVEVM as any).cve_id || selectedCVEVM.name}
+                                </h3>
+                                <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: 'var(--text-muted)' }}>
+                                    Technická dokumentace a ověření zranitelnosti pro výuku
+                                </p>
+                            </div>
+                            <button
+                                type="button"
+                                className="close-button"
+                                onClick={() => {
+                                    setSelectedCVEVM(null);
+                                    setCopiedCmd(false);
+                                }}
+                            >
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                                </svg>
+                            </button>
+                        </div>
+
+                        <div style={{ padding: '20px 24px' }}>
+                            <div style={{
+                                display: 'flex',
+                                gap: '8px',
+                                alignItems: 'center',
+                                marginBottom: '16px',
+                                flexWrap: 'wrap'
+                            }}>
+                                {(selectedCVEVM as any).cve_id && (
+                                    <span style={{
+                                        fontSize: '11px',
+                                        fontWeight: 700,
+                                        padding: '4px 8px',
+                                        borderRadius: '4px',
+                                        background: 'rgba(239, 68, 68, 0.15)',
+                                        color: '#ef4444'
+                                    }}>
+                                        {(selectedCVEVM as any).cve_id}
+                                    </span>
+                                )}
+                                {(selectedCVEVM as any).cvss && (
+                                    <span style={{
+                                        fontSize: '11px',
+                                        fontWeight: 700,
+                                        padding: '4px 8px',
+                                        borderRadius: '4px',
+                                        background: 'rgba(245, 158, 11, 0.15)',
+                                        color: '#f59e0b'
+                                    }}>
+                                        CVSS: {(selectedCVEVM as any).cvss}
+                                    </span>
+                                )}
+                                {(selectedCVEVM as any).port ? (
+                                    <span style={{
+                                        fontSize: '11px',
+                                        fontWeight: 600,
+                                        padding: '4px 8px',
+                                        borderRadius: '4px',
+                                        background: 'rgba(59, 130, 246, 0.15)',
+                                        color: '#3b82f6',
+                                        fontFamily: 'monospace'
+                                    }}>
+                                        Port: {(selectedCVEVM as any).port}
+                                    </span>
+                                ) : null}
+                                <span style={{
+                                    fontSize: '11px',
+                                    fontWeight: 600,
+                                    padding: '4px 8px',
+                                    borderRadius: '4px',
+                                    background: 'var(--bg-secondary, rgba(255,255,255,0.05))',
+                                    fontFamily: 'monospace'
+                                }}>
+                                    Cílová IP: {selectedCVEVM.ip_address || (selectedCVEVM as any).configured_ip || 'Zatím nepřidělena'}
+                                </span>
+                            </div>
+
+                            {(selectedCVEVM as any).exploit_doc && (
+                                <div style={{
+                                    background: 'var(--bg-secondary, rgba(255,255,255,0.03))',
+                                    border: '1px solid var(--border-color)',
+                                    borderRadius: '8px',
+                                    padding: '12px 14px',
+                                    marginBottom: '16px',
+                                    fontSize: '13px',
+                                    lineHeight: 1.5
+                                }}>
+                                    <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '6px' }}>
+                                        Popis a vektor zranitelnosti
+                                    </div>
+                                    <div>{(selectedCVEVM as any).exploit_doc}</div>
+                                </div>
+                            )}
+
+                            {(selectedCVEVM as any).exploit_hint && (
+                                <div style={{ marginBottom: '16px' }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                                        <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase' }}>
+                                            Příkaz pro ověření / PoC
+                                        </div>
+                                        <button
+                                            type="button"
+                                            className="btn btn-secondary btn-sm"
+                                            style={{ fontSize: '11px', padding: '3px 8px' }}
+                                            onClick={() => {
+                                                const cmd = ((selectedCVEVM as any).exploit_hint || '').replace(/\{IP\}/g, selectedCVEVM.ip_address || '<IP>');
+                                                navigator.clipboard.writeText(cmd);
+                                                setCopiedCmd(true);
+                                                setTimeout(() => setCopiedCmd(false), 2000);
+                                            }}
+                                        >
+                                            {copiedCmd ? 'Zkopírováno!' : 'Kopírovat příkaz'}
+                                        </button>
+                                    </div>
+                                    <pre style={{
+                                        margin: 0,
+                                        padding: '12px 14px',
+                                        background: 'rgba(0, 0, 0, 0.4)',
+                                        border: '1px solid var(--border-color)',
+                                        borderRadius: '8px',
+                                        fontSize: '12px',
+                                        fontFamily: 'monospace',
+                                        whiteSpace: 'pre-wrap',
+                                        wordBreak: 'break-all',
+                                        color: '#38bdf8'
+                                    }}>
+                                        {((selectedCVEVM as any).exploit_hint || '').replace(/\{IP\}/g, selectedCVEVM.ip_address || '<IP>')}
+                                    </pre>
+                                </div>
+                            )}
+
+                            <div style={{
+                                background: 'rgba(59, 130, 246, 0.08)',
+                                border: '1px solid rgba(59, 130, 246, 0.25)',
+                                borderRadius: '8px',
+                                padding: '12px 14px',
+                                fontSize: '12px',
+                                display: 'flex',
+                                justifyContent: 'space-between',
+                                alignItems: 'center',
+                                flexWrap: 'wrap',
+                                gap: '8px'
+                            }}>
+                                <div>
+                                    <span style={{ color: 'var(--text-muted)' }}>Konzolový / SSH přístup: </span>
+                                    <span style={{ fontFamily: 'monospace', fontWeight: 600 }}>root / toor</span>
+                                </div>
+                                <div>
+                                    <span style={{ color: 'var(--text-muted)' }}>Cílová vlajka (CTF): </span>
+                                    <span style={{ fontFamily: 'monospace', color: '#10b981' }}>/root/flag.txt</span>
+                                </div>
+                            </div>
+
+                            <div className="modal-actions" style={{ marginTop: '20px' }}>
+                                <button
+                                    type="button"
+                                    className="btn btn-secondary"
+                                    onClick={() => {
+                                        setSelectedCVEVM(null);
+                                        setCopiedCmd(false);
+                                    }}
+                                >
+                                    Zavřít
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             )}
 
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '8px' }}>
@@ -582,6 +804,14 @@ export function VMTable({
                         style={{ fontSize: '12px', padding: '5px 10px' }}
                     >
                         Kontejnery (LXC)
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => setTypeFilter('cve')}
+                        className={`btn btn-sm ${typeFilter === 'cve' ? 'btn-primary' : 'btn-secondary'}`}
+                        style={{ fontSize: '12px', padding: '5px 10px' }}
+                    >
+                        CVE laboratoře
                     </button>
                     <button
                         type="button"

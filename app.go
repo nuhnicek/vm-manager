@@ -52,6 +52,11 @@ type VM struct {
 	Gateway       string         `json:"gateway,omitempty"`
 	IsVulnerable  bool           `json:"is_vulnerable,omitempty"`
 	Category      string         `json:"category,omitempty"`
+	CVEID         string         `json:"cve_id,omitempty"`
+	CVSS          string         `json:"cvss,omitempty"`
+	Port          int            `json:"port,omitempty"`
+	ExploitHint   string         `json:"exploit_hint,omitempty"`
+	ExploitDoc    string         `json:"exploit_doc,omitempty"`
 	ProjectID     string         `json:"project_id,omitempty"`
 	ProjectName   string         `json:"project_name,omitempty"`
 	ProjectColor  string         `json:"project_color,omitempty"`

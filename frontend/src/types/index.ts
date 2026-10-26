@@ -103,6 +103,11 @@ export interface FleetVM {
     project_color?: string;
     networks?: string[];
     available_nics?: string[];
+    cve_id?: string;
+    cvss?: string;
+    port?: number;
+    exploit_hint?: string;
+    exploit_doc?: string;
 }
 
 export interface CatalogItem {
@@ -118,6 +123,11 @@ export interface CatalogItem {
     default_cpus: number;
     is_vulnerable: boolean;
     ready: boolean;
+    cve_id?: string;
+    cvss?: string;
+    port?: number;
+    exploit_hint?: string;
+    exploit_doc?: string;
 }
 
 export interface DeployCatalogRequest {
