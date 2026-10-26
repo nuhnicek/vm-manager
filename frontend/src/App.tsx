@@ -580,11 +580,11 @@ function App() {
         }
     };
 
-    const handleConnect = async (targetVmId: string, localNic: string, targetNic: string) => {
+    const handleConnect = async (localNic: string, targetVmId: string, targetNic: string) => {
         if (!managingConnectionsVM) return;
         try {
             if (typeof window !== 'undefined' && (window as any).go?.main?.App?.ConnectVMs) {
-                const result = await ConnectVMs(String(managingConnectionsVM.id), targetVmId, localNic, targetNic);
+                const result = await ConnectVMs(String(managingConnectionsVM.id), localNic, targetVmId, targetNic);
                 setMessage(result);
             } else {
                 const vmid1 = parseInt(String(managingConnectionsVM.id), 10);
@@ -592,9 +592,21 @@ function App() {
                 const resp = await apiFetch('/vms/network/create', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ vmid1, vmid2, nic1: localNic, nic2: targetNic })
+                    body: JSON.stringify({
+                        vmid1,
+                        vmid2,
+                        vmid: vmid1,
+                        target_vm_id: vmid2,
+                        nic1: localNic,
+                        nic2: targetNic,
+                        local_nic: localNic,
+                        target_nic: targetNic
+                    })
                 });
-                if (!resp || !resp.ok) throw new Error('Nepodařilo se propojit virtuální stroje');
+                if (!resp || !resp.ok) {
+                    const errData = await resp?.json().catch(() => ({}));
+                    throw new Error(errData?.error || 'Nepodařilo se propojit virtuální stroje');
+                }
                 setMessage(`Virtuální stroje byly úspěšně propojeny`);
             }
             triggerRefetch();
