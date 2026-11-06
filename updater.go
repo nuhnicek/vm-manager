@@ -118,8 +118,14 @@ func findCompatibleAsset(assets []GitHubReleaseAsset) *GitHubReleaseAsset {
 			}
 		}
 	}
-	// Fallback: if single asset, return it
-	if len(assets) == 1 {
+	// Fallback: if only .exe is available or general asset
+	for _, asset := range assets {
+		lower := strings.ToLower(asset.Name)
+		if strings.HasSuffix(lower, ".exe") {
+			return &asset
+		}
+	}
+	if len(assets) > 0 {
 		return &assets[0]
 	}
 	return nil
@@ -137,6 +143,10 @@ func (a *App) CheckForUpdate() (*UpdateInfo, error) {
 	req.Header.Set("Accept", "application/vnd.github.v3+json")
 	req.Header.Set("User-Agent", "Lab411-VM-Manager")
 
+	if token := os.Getenv("GITHUB_TOKEN"); token != "" {
+		req.Header.Set("Authorization", "Bearer "+token)
+	}
+
 	client := &http.Client{Timeout: 10 * time.Second}
 	resp, err := client.Do(req)
 	if err != nil {
@@ -147,8 +157,8 @@ func (a *App) CheckForUpdate() (*UpdateInfo, error) {
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode == http.StatusNotFound {
-		// No release yet published
+	if resp.StatusCode == http.StatusNotFound || resp.StatusCode == http.StatusForbidden || resp.StatusCode == http.StatusTooManyRequests {
+		// No release yet published or rate limited
 		return &UpdateInfo{
 			CurrentVersion: AppVersion,
 			HasUpdate:      false,
