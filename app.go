@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -127,7 +128,7 @@ func NewApp() *App {
 
 	backendURL := os.Getenv("BACKEND_URL")
 	if backendURL == "" {
-		backendURL = "http://10.0.10.52:8080"
+		backendURL = "http://10.0.10.30:8080"
 	}
 
 	return &App{
@@ -158,6 +159,12 @@ func (a *App) GetBackendURL() string {
 
 func (a *App) startup(ctx context.Context) {
 	a.ctx = ctx
+	// Clean up any .old binary left over from previous self-update
+	if execPath, err := os.Executable(); err == nil {
+		if resolved, err := filepath.EvalSymlinks(execPath); err == nil {
+			_ = os.Remove(resolved + ".old")
+		}
+	}
 }
 
 func (a *App) GetVMs(token string) ([]VM, error) {
@@ -461,13 +468,19 @@ func (a *App) CreateVMFromTemplate(name string, templateID string) (*VM, error) 
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode == http.StatusUnauthorized {
-		return nil, fmt.Errorf("session expired or unauthorized")
-	}
-	if resp.StatusCode == http.StatusBadRequest {
-		return nil, fmt.Errorf("invalid VM creation request")
-	}
 	if resp.StatusCode != http.StatusOK {
+		var errData struct {
+			Error string `json:"error"`
+		}
+		if json.NewDecoder(resp.Body).Decode(&errData) == nil && errData.Error != "" {
+			return nil, fmt.Errorf("%s", errData.Error)
+		}
+		if resp.StatusCode == http.StatusUnauthorized {
+			return nil, fmt.Errorf("session expired or unauthorized")
+		}
+		if resp.StatusCode == http.StatusBadRequest {
+			return nil, fmt.Errorf("invalid VM creation request")
+		}
 		return nil, fmt.Errorf("failed to create VM: status %d", resp.StatusCode)
 	}
 
@@ -554,6 +567,12 @@ func (a *App) CreateVMOnNode(name string, templateID string, node string) (*VM, 
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
+		var errData struct {
+			Error string `json:"error"`
+		}
+		if json.NewDecoder(resp.Body).Decode(&errData) == nil && errData.Error != "" {
+			return nil, fmt.Errorf("%s", errData.Error)
+		}
 		return nil, fmt.Errorf("backend returned status %d", resp.StatusCode)
 	}
 

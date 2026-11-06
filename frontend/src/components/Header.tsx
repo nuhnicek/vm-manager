@@ -8,6 +8,11 @@ interface HeaderProps {
     theme: 'light' | 'dark';
     onToggleTheme: () => void;
     onLogout: () => void;
+    hasUpdate?: boolean;
+    updateVersion?: string;
+    onOpenUpdate?: () => void;
+    onCheckUpdate?: () => void;
+    isCheckingUpdate?: boolean;
 }
 
 export function Header({
@@ -19,7 +24,12 @@ export function Header({
     onToggleNetworkMap,
     theme,
     onToggleTheme,
-    onLogout
+    onLogout,
+    hasUpdate,
+    updateVersion,
+    onOpenUpdate,
+    onCheckUpdate,
+    isCheckingUpdate
 }: HeaderProps) {
     const isTeacher = userRole === 'teacher';
 
@@ -27,7 +37,6 @@ export function Header({
         <header className="header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    
                     <h2 style={{ margin: 0 }}>Lab411</h2>
                 </div>
 
@@ -50,6 +59,49 @@ export function Header({
             </div>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                {hasUpdate ? (
+                    <button
+                        className="btn btn-sm"
+                        onClick={onOpenUpdate}
+                        style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                            background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                            color: '#fff',
+                            border: 'none',
+                            fontWeight: 600,
+                            boxShadow: '0 2px 8px rgba(16, 185, 129, 0.4)',
+                            cursor: 'pointer'
+                        }}
+                        title="Klikněte pro stažení a instalaci aktualizace"
+                    >
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                            <polyline points="7 10 12 15 17 10"></polyline>
+                            <line x1="12" y1="15" x2="12" y2="3"></line>
+                        </svg>
+                        Aktualizovat {updateVersion ? `(${updateVersion})` : ''}
+                    </button>
+                ) : (
+                    onCheckUpdate && (
+                        <button
+                            className="btn btn-secondary btn-sm"
+                            onClick={onCheckUpdate}
+                            disabled={isCheckingUpdate}
+                            title="Zkontrolovat novou verzi aplikace na GitHubu"
+                            style={{ display: 'flex', alignItems: 'center', gap: '5px' }}
+                        >
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ animation: isCheckingUpdate ? 'spin 1s linear infinite' : 'none' }}>
+                                <polyline points="23 4 23 10 17 10"></polyline>
+                                <polyline points="1 20 1 14 7 14"></polyline>
+                                <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+                            </svg>
+                            {isCheckingUpdate ? 'Ověřuji...' : 'Aktualizace'}
+                        </button>
+                    )
+                )}
+
                 <button 
                     className="theme-toggle-btn"
                     onClick={onToggleTheme}

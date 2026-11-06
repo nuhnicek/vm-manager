@@ -94,28 +94,18 @@ export function CreateVMModal({
         setIsSubmitting(true);
         setError('');
         try {
-            let tplNode = selectedNode;
+            const tplNode = selectedNode ? selectedNode.trim() : '';
             let tplId = selectedTemplateKey;
             if (selectedTemplateKey.includes(':')) {
                 const parts = selectedTemplateKey.split(':');
                 if (isNaN(Number(parts[0]))) {
-                    if (!tplNode) tplNode = parts[0];
                     tplId = parts[1];
                 } else {
                     tplId = parts[0];
                 }
             }
-            if (!tplNode) {
-                const found = templates.find(t => {
-                    const np = (t as any).node || '';
-                    return `${np}:${t.id}` === selectedTemplateKey || `${t.id}:${t.name}` === selectedTemplateKey || String(t.id) === selectedTemplateKey;
-                });
-                if (found && (found as any).node) {
-                    tplNode = (found as any).node;
-                }
-            }
 
-            await onCreateVM(name.trim(), tplId, tplNode, assignedProjectId || undefined);
+            await onCreateVM(name.trim(), tplId, tplNode || undefined, assignedProjectId || undefined);
             onClose();
         } catch (err: any) {
             setError(err?.message || 'Vytvoření virtuálního stroje selhalo');

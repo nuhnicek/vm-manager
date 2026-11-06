@@ -4,6 +4,8 @@ import {main} from '../models';
 
 export function AddNIC(arg1:string):Promise<string>;
 
+export function CheckForUpdate():Promise<main.UpdateInfo>;
+
 export function ConnectToLabNetwork(arg1:string):Promise<string>;
 
 export function ConnectVMs(arg1:string,arg2:string,arg3:string,arg4:string):Promise<string>;
@@ -17,6 +19,10 @@ export function DeleteVM(arg1:string):Promise<string>;
 export function DisconnectFromLabNetwork(arg1:string):Promise<string>;
 
 export function DisconnectVMs(arg1:string,arg2:string):Promise<string>;
+
+export function DownloadAndApplyUpdate(arg1:string):Promise<void>;
+
+export function GetAppVersion():Promise<string>;
 
 export function GetBackendURL():Promise<string>;
 
@@ -41,6 +47,8 @@ export function OpenConsole(arg1:string):Promise<string>;
 export function RemoveNIC(arg1:string,arg2:string):Promise<string>;
 
 export function ResizePTY(arg1:number,arg2:number):Promise<void>;
+
+export function RestartApp():Promise<void>;
 
 export function StartPTY():Promise<void>;
 

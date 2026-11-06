@@ -6,6 +6,10 @@ export function AddNIC(arg1) {
   return window['go']['main']['App']['AddNIC'](arg1);
 }
 
+export function CheckForUpdate() {
+  return window['go']['main']['App']['CheckForUpdate']();
+}
+
 export function ConnectToLabNetwork(arg1) {
   return window['go']['main']['App']['ConnectToLabNetwork'](arg1);
 }
@@ -32,6 +36,14 @@ export function DisconnectFromLabNetwork(arg1) {
 
 export function DisconnectVMs(arg1, arg2) {
   return window['go']['main']['App']['DisconnectVMs'](arg1, arg2);
+}
+
+export function DownloadAndApplyUpdate(arg1) {
+  return window['go']['main']['App']['DownloadAndApplyUpdate'](arg1);
+}
+
+export function GetAppVersion() {
+  return window['go']['main']['App']['GetAppVersion']();
 }
 
 export function GetBackendURL() {
@@ -80,6 +92,10 @@ export function RemoveNIC(arg1, arg2) {
 
 export function ResizePTY(arg1, arg2) {
   return window['go']['main']['App']['ResizePTY'](arg1, arg2);
+}
+
+export function RestartApp() {
+  return window['go']['main']['App']['RestartApp']();
 }
 
 export function StartPTY() {

@@ -58,6 +58,34 @@ export namespace main {
 	        this.node = source["node"];
 	    }
 	}
+	export class UpdateInfo {
+	    current_version: string;
+	    latest_version: string;
+	    release_name: string;
+	    release_notes: string;
+	    published_at: string;
+	    download_url: string;
+	    asset_size: number;
+	    asset_name: string;
+	    has_update: boolean;
+	
+	    static createFrom(source: any = {}) {
+	        return new UpdateInfo(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.current_version = source["current_version"];
+	        this.latest_version = source["latest_version"];
+	        this.release_name = source["release_name"];
+	        this.release_notes = source["release_notes"];
+	        this.published_at = source["published_at"];
+	        this.download_url = source["download_url"];
+	        this.asset_size = source["asset_size"];
+	        this.asset_name = source["asset_name"];
+	        this.has_update = source["has_update"];
+	    }
+	}
 	export class VMConnection {
 	    target_vm_id: string;
 	    local_nic: string;

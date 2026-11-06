@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { 
     GetVMs, GetTemplates, StartVM, StopVM, DeleteVM, CreateVMFromTemplate, 
     GetLaunchedConsoleVM, GetConsoleParams, OpenConsole, ConnectVMs, DisconnectVMs, AddNIC, RemoveNIC,
-    VerifySession, Logout
+    VerifySession, Logout, CheckForUpdate
 } from '../wailsjs/go/main/App';
 import { main } from '../wailsjs/go/models';
 import { VMConsole } from './VMConsole';
@@ -22,6 +22,7 @@ import { ProjectModal } from './components/ProjectModal';
 import { AssignProjectVMsModal } from './components/AssignProjectVMsModal';
 import { SetIPModal } from './components/SetIPModal';
 import { CatalogModal } from './components/CatalogModal';
+import { UpdateModal } from './components/UpdateModal';
 import { apiFetch } from './api';
 
 import './App.css';
@@ -72,6 +73,38 @@ function App() {
         message: '',
         onConfirm: () => {}
     });
+
+    const [updateInfo, setUpdateInfo] = useState<main.UpdateInfo | null>(null);
+    const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
+    const [isCheckingUpdate, setIsCheckingUpdate] = useState(false);
+
+    const checkForUpdates = async (manual: boolean = false) => {
+        setIsCheckingUpdate(true);
+        try {
+            const info = await CheckForUpdate();
+            if (info && info.has_update) {
+                setUpdateInfo(info);
+                if (manual) {
+                    setIsUpdateModalOpen(true);
+                }
+            } else if (manual) {
+                setMessage('Máte nejnovější verzi aplikace.');
+                setTimeout(() => setMessage(''), 4000);
+            }
+        } catch (err: any) {
+            if (manual) {
+                setMessage('Kontrola aktualizací selhala: ' + (err?.message || err));
+                setTimeout(() => setMessage(''), 4000);
+            }
+        } finally {
+            setIsCheckingUpdate(false);
+        }
+    };
+
+    useEffect(() => {
+        // Check for updates on startup
+        checkForUpdates(false);
+    }, []);
 
     useEffect(() => {
         document.documentElement.setAttribute('data-theme', theme);
@@ -898,6 +931,11 @@ function App() {
                 onLogout={handleLogout}
                 showNetworkMap={showNetworkMap}
                 onToggleNetworkMap={() => setShowNetworkMap(prev => !prev)}
+                hasUpdate={Boolean(updateInfo?.has_update)}
+                updateVersion={updateInfo?.latest_version}
+                onOpenUpdate={() => setIsUpdateModalOpen(true)}
+                onCheckUpdate={() => checkForUpdates(true)}
+                isCheckingUpdate={isCheckingUpdate}
             />
 
             {message && (
@@ -965,6 +1003,12 @@ function App() {
                     />
                 </>
             )}
+
+            <UpdateModal 
+                isOpen={isUpdateModalOpen}
+                onClose={() => setIsUpdateModalOpen(false)}
+                updateInfo={updateInfo}
+            />
         </div>
     );
 }
