@@ -139,7 +139,7 @@ export function UpdateModal({ isOpen, onClose, updateInfo }: UpdateModalProps) {
                             Aktuální verze
                         </div>
                         <div style={{ fontWeight: 600, fontSize: '14px' }}>
-                            {updateInfo.current_version || 'v1.0.2'}
+                            {updateInfo.current_version || 'v1.0.3'}
                         </div>
                     </div>
 

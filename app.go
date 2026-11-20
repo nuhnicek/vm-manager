@@ -558,12 +558,17 @@ func (a *App) CreateVMFromTemplate(name string, templateID string) (*VM, error) 
 		return nil, fmt.Errorf("failed to create VM: status %d", resp.StatusCode)
 	}
 
-	var vmUUID string
-	_ = json.NewDecoder(resp.Body).Decode(&vmUUID)
+	var respData struct {
+		UUID      string `json:"uuid"`
+		VMID      uint64 `json:"vmid"`
+		ProjectID string `json:"project_id"`
+	}
+	_ = json.NewDecoder(resp.Body).Decode(&respData)
 
 	newVM := &VM{
+		ID:   respData.VMID,
 		Name: name,
-		UUID: vmUUID,
+		UUID: respData.UUID,
 		Node: selectedNode,
 	}
 	return newVM, nil
@@ -650,15 +655,20 @@ func (a *App) CreateVMOnNode(name string, templateID string, node string) (*VM, 
 		return nil, fmt.Errorf("backend returned status %d", resp.StatusCode)
 	}
 
-	var vmUUID string
-	if err := json.NewDecoder(resp.Body).Decode(&vmUUID); err != nil {
-		vmUUID = fmt.Sprintf("vm-%d", time.Now().Unix())
+	var respData struct {
+		UUID      string `json:"uuid"`
+		VMID      uint64 `json:"vmid"`
+		ProjectID string `json:"project_id"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&respData); err != nil {
+		respData.UUID = fmt.Sprintf("vm-%d", time.Now().Unix())
 	}
 
 	newVM := &VM{
+		ID:   respData.VMID,
 		Name: name,
 		Node: node,
-		UUID: vmUUID,
+		UUID: respData.UUID,
 	}
 	return newVM, nil
 }

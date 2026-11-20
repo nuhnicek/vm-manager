@@ -139,7 +139,7 @@ jobs:
           mkdir -p /tmp/lab411-deb/DEBIAN /tmp/lab411-deb/usr/bin /tmp/lab411-deb/usr/share/applications /tmp/lab411-deb/usr/share/pixmaps /tmp/lab411-deb/etc/lab411
           cat << 'EOF' > /tmp/lab411-deb/DEBIAN/control
           Package: lab411-vm-manager
-          Version: 1.0.2
+          Version: 1.0.3
           Section: utils
           Priority: optional
           Architecture: amd64
@@ -164,7 +164,7 @@ jobs:
           chmod +x /tmp/lab411-deb/usr/bin/lab411-vm-manager
           cp ../appicon.png /tmp/lab411-deb/usr/share/pixmaps/lab411-vm-manager.png
           cp ./config.json /tmp/lab411-deb/etc/lab411/config.json
-          dpkg-deb --build /tmp/lab411-deb lab411-vm-manager_1.0.2_amd64.deb
+          dpkg-deb --build /tmp/lab411-deb lab411-vm-manager_1.0.3_amd64.deb
 
       - name: Upload Linux Artifacts
         uses: actions/upload-artifact@v4
@@ -173,7 +173,7 @@ jobs:
           path: |
             build/bin/lab411-vm-manager-linux-amd64.tar.gz
             build/bin/vm-manager-linux-amd64.tar.gz
-            build/bin/lab411-vm-manager_1.0.2_amd64.deb
+            build/bin/lab411-vm-manager_1.0.3_amd64.deb
             build/bin/lab411-vm-manager-linux-amd64
             config.json
 
@@ -184,7 +184,7 @@ jobs:
           files: |
             build/bin/lab411-vm-manager-linux-amd64.tar.gz
             build/bin/vm-manager-linux-amd64.tar.gz
-            build/bin/lab411-vm-manager_1.0.2_amd64.deb
+            build/bin/lab411-vm-manager_1.0.3_amd64.deb
             build/bin/lab411-vm-manager-linux-amd64
             config.json
           draft: false
