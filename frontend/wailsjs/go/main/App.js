@@ -42,12 +42,20 @@ export function DownloadAndApplyUpdate(arg1) {
   return window['go']['main']['App']['DownloadAndApplyUpdate'](arg1);
 }
 
+export function GetAppConfig() {
+  return window['go']['main']['App']['GetAppConfig']();
+}
+
 export function GetAppVersion() {
   return window['go']['main']['App']['GetAppVersion']();
 }
 
 export function GetBackendURL() {
   return window['go']['main']['App']['GetBackendURL']();
+}
+
+export function GetConfigPath() {
+  return window['go']['main']['App']['GetConfigPath']();
 }
 
 export function GetConsoleParams() {
@@ -98,6 +106,10 @@ export function RestartApp() {
   return window['go']['main']['App']['RestartApp']();
 }
 
+export function SaveAppConfig(arg1) {
+  return window['go']['main']['App']['SaveAppConfig'](arg1);
+}
+
 export function StartPTY() {
   return window['go']['main']['App']['StartPTY']();
 }
@@ -108,6 +120,10 @@ export function StartVM(arg1) {
 
 export function StopVM(arg1) {
   return window['go']['main']['App']['StopVM'](arg1);
+}
+
+export function SwitchEnvironment(arg1) {
+  return window['go']['main']['App']['SwitchEnvironment'](arg1);
 }
 
 export function VerifySession(arg1) {

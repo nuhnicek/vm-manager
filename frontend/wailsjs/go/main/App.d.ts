@@ -22,9 +22,13 @@ export function DisconnectVMs(arg1:string,arg2:string):Promise<string>;
 
 export function DownloadAndApplyUpdate(arg1:string):Promise<void>;
 
+export function GetAppConfig():Promise<main.AppConfig>;
+
 export function GetAppVersion():Promise<string>;
 
 export function GetBackendURL():Promise<string>;
+
+export function GetConfigPath():Promise<string>;
 
 export function GetConsoleParams():Promise<Record<string, string>>;
 
@@ -50,11 +54,15 @@ export function ResizePTY(arg1:number,arg2:number):Promise<void>;
 
 export function RestartApp():Promise<void>;
 
+export function SaveAppConfig(arg1:main.AppConfig):Promise<boolean>;
+
 export function StartPTY():Promise<void>;
 
 export function StartVM(arg1:string):Promise<string>;
 
 export function StopVM(arg1:string):Promise<string>;
+
+export function SwitchEnvironment(arg1:string):Promise<main.AppConfig>;
 
 export function VerifySession(arg1:string):Promise<boolean>;
 

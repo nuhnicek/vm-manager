@@ -13,6 +13,8 @@ interface HeaderProps {
     onOpenUpdate?: () => void;
     onCheckUpdate?: () => void;
     isCheckingUpdate?: boolean;
+    onOpenConfig?: () => void;
+    activeEnvName?: string;
 }
 
 export function Header({
@@ -29,7 +31,9 @@ export function Header({
     updateVersion,
     onOpenUpdate,
     onCheckUpdate,
-    isCheckingUpdate
+    isCheckingUpdate,
+    onOpenConfig,
+    activeEnvName
 }: HeaderProps) {
     const isTeacher = userRole === 'teacher';
 
@@ -59,6 +63,17 @@ export function Header({
             </div>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                {onOpenConfig && (
+                    <button 
+                        className="btn btn-secondary btn-sm"
+                        onClick={onOpenConfig}
+                        title="Zobrazit konfiguraci aplikace a přepnout prostředí (config.json)"
+                        style={{ display: 'flex', alignItems: 'center', gap: '5px' }}
+                    >
+                        <span>⚙️</span>
+                        <span>{activeEnvName ? activeEnvName : 'Konfigurace'}</span>
+                    </button>
+                )}
                 {hasUpdate ? (
                     <button
                         className="btn btn-sm"

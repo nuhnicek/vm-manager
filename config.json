@@ -1,0 +1,39 @@
+{
+  "environment": "lab",
+  "backend_url": "http://10.0.10.30:8080",
+  "environments": {
+    "lab": {
+      "name": "Lab 411 Cluster",
+      "backend_url": "http://10.0.10.30:8080",
+      "description": "Školní laboratorní cluster SPŠE Ostrava",
+      "env": {
+        "PROXMOX_REALM": "pve",
+        "CLUSTER_NAME": "lab411"
+      }
+    },
+    "local": {
+      "name": "Lokální vývoj (Localhost)",
+      "backend_url": "http://127.0.0.1:8080",
+      "description": "Lokální backend na vývojářském počítači",
+      "env": {
+        "APP_ENV": "development"
+      }
+    },
+    "staging": {
+      "name": "Testovací prostředí (Staging)",
+      "backend_url": "http://10.0.10.30:8081",
+      "description": "Testovací uzel pro ověřování nových funkcí",
+      "env": {
+        "APP_ENV": "staging"
+      }
+    }
+  },
+  "env": {
+    "BACKEND_URL": "http://10.0.10.30:8080",
+    "LAB_CLUSTER": "lab411",
+    "APP_ENV": "lab"
+  },
+  "auto_check_update": true,
+  "github_repo": "nuhnicek/vm-manager",
+  "theme": "dark"
+}

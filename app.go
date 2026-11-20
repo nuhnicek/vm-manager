@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/creack/pty"
@@ -100,16 +101,19 @@ type App struct {
 	consoleModeVM    string
 	consoleModeToken string
 	ptyFile          *os.File
+	config           AppConfig
 	backendURL       string
 	authToken        string
 	userEmail        string
 	userRole         string
+	mu               sync.RWMutex
 }
 
 func NewApp() *App {
 	consoleID := ""
 	consoleVM := ""
 	consoleToken := ""
+	configArg := ""
 	args := os.Args
 	for i, arg := range args {
 		if arg == "--console" && i+1 < len(args) {
@@ -121,20 +125,30 @@ func NewApp() *App {
 		if arg == "--token" && i+1 < len(args) {
 			consoleToken = args[i+1]
 		}
+		if (arg == "--config" || arg == "-config") && i+1 < len(args) {
+			configArg = args[i+1]
+		}
 	}
 	if consoleVM == "" {
 		consoleVM = consoleID
 	}
 
-	backendURL := os.Getenv("BACKEND_URL")
-	if backendURL == "" {
-		backendURL = "http://10.0.10.30:8080"
+	cfg, err := LoadConfig(configArg)
+	if err != nil {
+		fmt.Printf("[App] Warning: failed to load config.json: %v, using default config\n", err)
+		cfg = DefaultConfig()
+	}
+
+	backendURL := cfg.BackendURL
+	if envBackend := os.Getenv("BACKEND_URL"); envBackend != "" {
+		backendURL = envBackend
 	}
 
 	return &App{
 		consoleModeID:    consoleID,
 		consoleModeVM:    consoleVM,
 		consoleModeToken: consoleToken,
+		config:           cfg,
 		backendURL:       backendURL,
 		vms:              []VM{},
 		templates:        []Template{},
@@ -154,7 +168,66 @@ func (a *App) GetConsoleParams() map[string]string {
 }
 
 func (a *App) GetBackendURL() string {
+	a.mu.RLock()
+	defer a.mu.RUnlock()
 	return a.backendURL
+}
+
+// GetAppConfig returns the loaded configuration.
+func (a *App) GetAppConfig() AppConfig {
+	a.mu.RLock()
+	defer a.mu.RUnlock()
+	return a.config
+}
+
+// GetConfigPath returns the absolute path of the loaded config.json.
+func (a *App) GetConfigPath() string {
+	a.mu.RLock()
+	defer a.mu.RUnlock()
+	return a.config.ConfigPath
+}
+
+// SaveAppConfig updates and saves the app configuration to config.json.
+func (a *App) SaveAppConfig(newCfg AppConfig) (bool, error) {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+
+	if newCfg.ConfigPath == "" {
+		newCfg.ConfigPath = a.config.ConfigPath
+	}
+
+	applyConfigEnvironment(&newCfg)
+	if err := SaveConfig(newCfg); err != nil {
+		return false, err
+	}
+
+	a.config = newCfg
+	a.backendURL = newCfg.BackendURL
+	return true, nil
+}
+
+// SwitchEnvironment activates an environment profile from config.json (e.g. "lab", "local", "staging").
+func (a *App) SwitchEnvironment(envName string) (AppConfig, error) {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+
+	profile, ok := a.config.Environments[envName]
+	if !ok {
+		return a.config, fmt.Errorf("environment '%s' is not defined in config.json", envName)
+	}
+
+	a.config.Environment = envName
+	if profile.BackendURL != "" {
+		a.config.BackendURL = profile.BackendURL
+		a.backendURL = profile.BackendURL
+	}
+
+	applyConfigEnvironment(&a.config)
+	if err := SaveConfig(a.config); err != nil {
+		return a.config, fmt.Errorf("failed to save configuration after switching environment: %w", err)
+	}
+
+	return a.config, nil
 }
 
 func (a *App) startup(ctx context.Context) {
@@ -381,6 +454,7 @@ func (a *App) OpenConsole(id string) (string, error) {
 	)
 	cmd.Env = append(os.Environ(),
 		"BACKEND_URL="+a.backendURL,
+		"LAB411_CONFIG="+a.config.ConfigPath,
 	)
 	err = cmd.Start()
 	if err != nil {

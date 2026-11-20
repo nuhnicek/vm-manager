@@ -1,5 +1,67 @@
 export namespace main {
 	
+	export class EnvironmentProfile {
+	    name: string;
+	    backend_url: string;
+	    description?: string;
+	    env?: Record<string, string>;
+	
+	    static createFrom(source: any = {}) {
+	        return new EnvironmentProfile(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.backend_url = source["backend_url"];
+	        this.description = source["description"];
+	        this.env = source["env"];
+	    }
+	}
+	export class AppConfig {
+	    environment: string;
+	    backend_url: string;
+	    environments: Record<string, EnvironmentProfile>;
+	    env: Record<string, string>;
+	    auto_check_update: boolean;
+	    github_repo: string;
+	    theme?: string;
+	    config_path?: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new AppConfig(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.environment = source["environment"];
+	        this.backend_url = source["backend_url"];
+	        this.environments = this.convertValues(source["environments"], EnvironmentProfile, true);
+	        this.env = source["env"];
+	        this.auto_check_update = source["auto_check_update"];
+	        this.github_repo = source["github_repo"];
+	        this.theme = source["theme"];
+	        this.config_path = source["config_path"];
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
 	export class AuthResult {
 	    token: string;
 	    email: string;
@@ -16,6 +78,7 @@ export namespace main {
 	        this.role = source["role"];
 	    }
 	}
+	
 	export class ProxmoxNode {
 	    name: string;
 	    host_uri: string;

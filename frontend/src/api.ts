@@ -2,6 +2,10 @@ import { GetBackendURL } from '../wailsjs/go/main/App';
 
 let cachedBackendUrl: string = '';
 
+export function invalidateCachedBackendUrl() {
+    cachedBackendUrl = '';
+}
+
 export async function getBackendBaseUrl(): Promise<string> {
     if (cachedBackendUrl) {
         return cachedBackendUrl;
@@ -18,7 +22,7 @@ export async function getBackendBaseUrl(): Promise<string> {
     if (typeof window !== 'undefined' && window.location) {
         const isWails = window.location.origin.includes('wails.localhost') || window.location.protocol === 'wails:';
         if (isWails) {
-            cachedBackendUrl = 'http://10.0.10.52:8080';
+            cachedBackendUrl = 'http://10.0.10.30:8080';
             return cachedBackendUrl;
         }
     }
@@ -27,7 +31,7 @@ export async function getBackendBaseUrl(): Promise<string> {
         cachedBackendUrl = envBackend.replace(/\/+$/, '');
         return cachedBackendUrl;
     }
-    cachedBackendUrl = 'http://10.0.10.52:8080';
+    cachedBackendUrl = 'http://10.0.10.30:8080';
     return cachedBackendUrl;
 }
 
@@ -50,12 +54,9 @@ export async function apiFetch(path: string, init?: RequestInit): Promise<Respon
         if (resp.status !== 404) {
             return resp;
         }
-        return await fetch(cleanPath, {
-            ...init,
-            headers
-        });
-    } catch {
-        return await fetch(cleanPath, {
+        return resp;
+    } catch (err) {
+        return fetch(cleanPath, {
             ...init,
             headers
         });

@@ -165,7 +165,17 @@ func (a *App) CheckForUpdate() (*UpdateInfo, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	apiURL := fmt.Sprintf("https://api.github.com/repos/%s/%s/releases/latest", GitHubRepoOwner, GitHubRepoName)
+	owner := GitHubRepoOwner
+	repo := GitHubRepoName
+	if a.config.GitHubRepo != "" {
+		parts := strings.Split(a.config.GitHubRepo, "/")
+		if len(parts) == 2 {
+			owner = strings.TrimSpace(parts[0])
+			repo = strings.TrimSpace(parts[1])
+		}
+	}
+
+	apiURL := fmt.Sprintf("https://api.github.com/repos/%s/%s/releases/latest", owner, repo)
 	req, err := http.NewRequestWithContext(ctx, "GET", apiURL, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %w", err)

@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { 
     GetVMs, GetTemplates, StartVM, StopVM, DeleteVM, CreateVMFromTemplate, 
     GetLaunchedConsoleVM, GetConsoleParams, OpenConsole, ConnectVMs, DisconnectVMs, AddNIC, RemoveNIC,
-    VerifySession, Logout, CheckForUpdate
+    VerifySession, Logout, CheckForUpdate, GetAppConfig
 } from '../wailsjs/go/main/App';
 import { main } from '../wailsjs/go/models';
 import { VMConsole } from './VMConsole';
@@ -23,6 +23,7 @@ import { AssignProjectVMsModal } from './components/AssignProjectVMsModal';
 import { SetIPModal } from './components/SetIPModal';
 import { CatalogModal } from './components/CatalogModal';
 import { UpdateModal } from './components/UpdateModal';
+import { ConfigModal } from './components/ConfigModal';
 import { apiFetch } from './api';
 
 import './App.css';
@@ -74,9 +75,27 @@ function App() {
         onConfirm: () => {}
     });
 
+    const [appConfig, setAppConfig] = useState<main.AppConfig | null>(null);
+    const [isConfigModalOpen, setIsConfigModalOpen] = useState(false);
+
     const [updateInfo, setUpdateInfo] = useState<main.UpdateInfo | null>(null);
     const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
     const [isCheckingUpdate, setIsCheckingUpdate] = useState(false);
+
+    const refreshAppConfig = async () => {
+        try {
+            if (typeof window !== 'undefined' && (window as any).go?.main?.App?.GetAppConfig) {
+                const cfg = await GetAppConfig();
+                setAppConfig(cfg);
+            }
+        } catch (e) {
+            console.error('Failed to load app config:', e);
+        }
+    };
+
+    useEffect(() => {
+        refreshAppConfig();
+    }, []);
 
     const checkForUpdates = async (manual: boolean = false) => {
         setIsCheckingUpdate(true);
@@ -102,9 +121,11 @@ function App() {
     };
 
     useEffect(() => {
-        // Check for updates on startup
-        checkForUpdates(false);
-    }, []);
+        // Check for updates on startup if allowed by config
+        if (appConfig === null || appConfig.auto_check_update !== false) {
+            checkForUpdates(false);
+        }
+    }, [appConfig?.auto_check_update]);
 
     useEffect(() => {
         document.documentElement.setAttribute('data-theme', theme);
@@ -798,6 +819,10 @@ function App() {
         }
     };
 
+    const activeEnvName = appConfig?.environments && appConfig.environment && appConfig.environments[appConfig.environment]
+        ? appConfig.environments[appConfig.environment].name || appConfig.environment
+        : (appConfig?.environment || 'Lab 411');
+
     if (launchedConsoleVM) {
         return (
             <div style={{ width: '100vw', height: '100vh', backgroundColor: '#000000' }}>
@@ -828,7 +853,21 @@ function App() {
     }
 
     if (!isAuthenticated) {
-        return <Login onLoginSuccess={handleLoginSuccess} />;
+        return (
+            <>
+                <Login 
+                    onLoginSuccess={handleLoginSuccess}
+                    onOpenConfig={() => setIsConfigModalOpen(true)}
+                    activeEnvName={activeEnvName}
+                    backendUrl={appConfig?.backend_url}
+                />
+                <ConfigModal 
+                    isOpen={isConfigModalOpen} 
+                    onClose={() => setIsConfigModalOpen(false)} 
+                    onConfigUpdated={(cfg) => setAppConfig(cfg)} 
+                />
+            </>
+        );
     }
 
     const filteredVMs = selectedNode 
@@ -936,6 +975,8 @@ function App() {
                 onOpenUpdate={() => setIsUpdateModalOpen(true)}
                 onCheckUpdate={() => checkForUpdates(true)}
                 isCheckingUpdate={isCheckingUpdate}
+                onOpenConfig={() => setIsConfigModalOpen(true)}
+                activeEnvName={activeEnvName}
             />
 
             {message && (
@@ -1008,6 +1049,15 @@ function App() {
                 isOpen={isUpdateModalOpen}
                 onClose={() => setIsUpdateModalOpen(false)}
                 updateInfo={updateInfo}
+            />
+
+            <ConfigModal 
+                isOpen={isConfigModalOpen} 
+                onClose={() => setIsConfigModalOpen(false)} 
+                onConfigUpdated={(cfg) => {
+                    setAppConfig(cfg);
+                    triggerRefetch();
+                }} 
             />
         </div>
     );

@@ -43,6 +43,7 @@ jobs:
 
       - name: Prepare Release Artifacts
         run: |
+          Copy-Item config.json build\bin\config.json
           Copy-Item build\bin\lab411-vm-manager.exe build\bin\vm-manager.exe
           Copy-Item build\bin\lab411-vm-manager-amd64-installer.exe build\bin\lab411-vm-manager-installer.exe
           Copy-Item build\bin\lab411-vm-manager-amd64-installer.exe build\bin\vm-manager-installer.exe
@@ -57,6 +58,7 @@ jobs:
             build/bin/vm-manager-installer.exe
             build/bin/lab411-vm-manager.exe
             build/bin/vm-manager.exe
+            config.json
 
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
@@ -68,6 +70,7 @@ jobs:
             build/bin/vm-manager-installer.exe
             build/bin/lab411-vm-manager.exe
             build/bin/vm-manager.exe
+            config.json
           draft: false
           prerelease: false
           generate_release_notes: true

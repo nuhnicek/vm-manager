@@ -63,6 +63,10 @@ Section
 
     !insertmacro wails.files
 
+    ; Install default config.json if not already present
+    IfFileExists "$INSTDIR\config.json" +2 0
+        File "..\..\..\config.json"
+
     CreateShortcut "$SMPROGRAMS\${INFO_PRODUCTNAME}.lnk" "$INSTDIR\${PRODUCT_EXECUTABLE}"
     CreateShortCut "$DESKTOP\${INFO_PRODUCTNAME}.lnk" "$INSTDIR\${PRODUCT_EXECUTABLE}"
 

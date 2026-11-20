@@ -1,11 +1,15 @@
 import { useState } from 'react';
 import { Login as WailsLogin } from '../../wailsjs/go/main/App';
+import { getBackendBaseUrl } from '../api';
 
 interface LoginProps {
     onLoginSuccess: (token: string, email: string, role?: string) => void;
+    onOpenConfig?: () => void;
+    activeEnvName?: string;
+    backendUrl?: string;
 }
 
-export function Login({ onLoginSuccess }: LoginProps) {
+export function Login({ onLoginSuccess, onOpenConfig, activeEnvName, backendUrl }: LoginProps) {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
@@ -34,14 +38,15 @@ export function Login({ onLoginSuccess }: LoginProps) {
                 role = (res as any).role || '';
             } else {
                 let resp: Response;
+                const baseUrl = await getBackendBaseUrl();
                 try {
-                    resp = await fetch('/auth/login', {
+                    resp = await fetch(`${baseUrl}/auth/login`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ email: userEmail, password })
                     });
                 } catch {
-                    resp = await fetch('http://10.0.10.52:8080/auth/login', {
+                    resp = await fetch('/auth/login', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ email: userEmail, password })
@@ -134,6 +139,39 @@ export function Login({ onLoginSuccess }: LoginProps) {
 
                 <div className="login-hint">
                     Přihlaste se svými školními přístupovými údaji.
+                </div>
+
+                <div style={{
+                    marginTop: '16px',
+                    paddingTop: '12px',
+                    borderTop: '1px solid var(--border-color)',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    fontSize: '12px',
+                    opacity: 0.85
+                }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <span style={{ display: 'inline-block', width: '8px', height: '8px', borderRadius: '50%', background: '#10b981' }}></span>
+                        <span>Prostředí: <strong>{activeEnvName || 'Lab 411'}</strong></span>
+                    </div>
+                    {onOpenConfig && (
+                        <button
+                            type="button"
+                            onClick={onOpenConfig}
+                            style={{
+                                background: 'transparent',
+                                border: 'none',
+                                color: 'var(--primary-color)',
+                                cursor: 'pointer',
+                                fontSize: '12px',
+                                textDecoration: 'underline',
+                                padding: 0
+                            }}
+                        >
+                            ⚙️ Nastavení (config.json)
+                        </button>
+                    )}
                 </div>
             </div>
         </div>
