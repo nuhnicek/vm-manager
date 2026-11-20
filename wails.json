@@ -10,5 +10,12 @@
   "author": {
     "name": "Petr Beunier",
     "email": "petrixbeu@gmail.com"
+  },
+  "info": {
+    "companyName": "Lab411",
+    "productName": "Lab411 VM Manager",
+    "productVersion": "1.0.1",
+    "copyright": "Copyright 2026 Lab411",
+    "comments": "Lab411 Proxmox VE Management Suite"
   }
 }

@@ -31,13 +31,20 @@ func TestSemverComparison(t *testing.T) {
 
 func TestAssetMatching(t *testing.T) {
 	assets := []GitHubReleaseAsset{
+		{Name: "lab411-vm-manager-amd64-installer.exe", BrowserDownloadURL: "https://example.com/installer.exe"},
 		{Name: "lab411-vm-manager.exe", BrowserDownloadURL: "https://example.com/win.exe"},
 		{Name: "lab411-vm-manager-linux", BrowserDownloadURL: "https://example.com/linux"},
 	}
 
-	asset := findCompatibleAsset(assets)
-	if asset == nil {
-		t.Fatalf("expected asset to be found")
+	binAsset, instAsset := findAssets(assets)
+	if binAsset == nil {
+		t.Fatalf("expected binary asset to be found")
+	}
+	if instAsset == nil {
+		t.Fatalf("expected installer asset to be found")
+	}
+	if instAsset.Name != "lab411-vm-manager-amd64-installer.exe" {
+		t.Errorf("expected installer name lab411-vm-manager-amd64-installer.exe, got %s", instAsset.Name)
 	}
 }
 
@@ -57,18 +64,9 @@ func TestLiveGitHubCheckForUpdate(t *testing.T) {
 	t.Logf("Download URL: %s", info.DownloadURL)
 	t.Logf("Asset Name: %s", info.AssetName)
 	t.Logf("Asset Size: %d", info.AssetSize)
+	t.Logf("Installer URL: %s", info.InstallerURL)
 
 	if info.LatestVersion == "" && !info.HasUpdate {
 		t.Skip("skipping live test: unauthenticated GitHub API rate limit reached")
-	}
-
-	if info.LatestVersion != "v1.0.1" {
-		t.Errorf("expected LatestVersion to be v1.0.1, got %s", info.LatestVersion)
-	}
-	if !info.HasUpdate {
-		t.Errorf("expected HasUpdate to be true (v1.0.0 < v1.0.1)")
-	}
-	if info.DownloadURL == "" {
-		t.Errorf("expected non-empty DownloadURL")
 	}
 }

@@ -23,12 +23,14 @@ export function UpdateModal({ isOpen, onClose, updateInfo }: UpdateModalProps) {
     const [downloadedMB, setDownloadedMB] = useState<string>('0');
     const [totalMB, setTotalMB] = useState<string>('0');
     const [errorMessage, setErrorMessage] = useState<string>('');
+    const [isUsingInstaller, setIsUsingInstaller] = useState<boolean>(false);
 
     useEffect(() => {
         if (!isOpen) {
             setStatus('idle');
             setProgress(0);
             setErrorMessage('');
+            setIsUsingInstaller(false);
             return;
         }
 
@@ -60,19 +62,21 @@ export function UpdateModal({ isOpen, onClose, updateInfo }: UpdateModalProps) {
 
     if (!isOpen || !updateInfo) return null;
 
-    const handleStartUpdate = async () => {
-        if (!updateInfo.download_url) {
-            setErrorMessage('Pro tento operační systém nebyl v GitHub vydání nalezen kompatibilní instalační balíček.');
+    const handleStartUpdate = async (targetURL?: string) => {
+        const url = targetURL || updateInfo.download_url || updateInfo.installer_url;
+        if (!url) {
+            setErrorMessage('Pro tento systém nebyl v GitHub vydání nalezen instalační balíček.');
             setStatus('error');
             return;
         }
 
+        setIsUsingInstaller(Boolean(url.toLowerCase().includes('installer')));
         setStatus('downloading');
         setProgress(0);
         setErrorMessage('');
 
         try {
-            await DownloadAndApplyUpdate(updateInfo.download_url);
+            await DownloadAndApplyUpdate(url);
         } catch (err: any) {
             setErrorMessage(err?.message || 'Nastala chyba při stahování nebo instalaci aktualizace.');
             setStatus('error');
@@ -83,7 +87,7 @@ export function UpdateModal({ isOpen, onClose, updateInfo }: UpdateModalProps) {
         try {
             await RestartApp();
         } catch (err: any) {
-            setErrorMessage('Restart aplikace selhal: ' + (err?.message || err));
+            setErrorMessage('Spuštění aplikace selhalo: ' + (err?.message || err));
         }
     };
 
@@ -115,7 +119,7 @@ export function UpdateModal({ isOpen, onClose, updateInfo }: UpdateModalProps) {
                     <div>
                         <h4 style={{ margin: 0, fontSize: '18px' }}>Dostupná nová aktualizace</h4>
                         <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
-                            Nalezena novější verze na GitHubu
+                            K dispozici je novější verze aplikace Lab411
                         </span>
                     </div>
                 </div>
@@ -135,7 +139,7 @@ export function UpdateModal({ isOpen, onClose, updateInfo }: UpdateModalProps) {
                             Aktuální verze
                         </div>
                         <div style={{ fontWeight: 600, fontSize: '14px' }}>
-                            {updateInfo.current_version || 'v1.0.0'}
+                            {updateInfo.current_version || 'v1.0.1'}
                         </div>
                     </div>
 
@@ -189,10 +193,43 @@ export function UpdateModal({ isOpen, onClose, updateInfo }: UpdateModalProps) {
                     </div>
                 )}
 
+                {status === 'idle' && updateInfo.installer_url && (
+                    <div style={{
+                        marginBottom: '16px',
+                        padding: '10px 14px',
+                        borderRadius: '6px',
+                        background: 'var(--card-bg-subtle, rgba(255,255,255,0.03))',
+                        border: '1px solid var(--border-color)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        fontSize: '12px'
+                    }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: '#10b981' }}>
+                                <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+                                <line x1="8" y1="21" x2="16" y2="21"></line>
+                                <line x1="12" y1="17" x2="12" y2="21"></line>
+                            </svg>
+                            <span>
+                                <strong>Windows Instalátor</strong> {updateInfo.installer_size ? `(${formatSize(updateInfo.installer_size)})` : ''}
+                            </span>
+                        </div>
+                        <button
+                            className="btn btn-secondary btn-sm"
+                            onClick={() => handleStartUpdate(updateInfo.installer_url)}
+                            style={{ fontSize: '11px', padding: '4px 10px' }}
+                            title="Nainstalovat pomocí oficiálního průvodce instalací"
+                        >
+                            Spustit instalátor
+                        </button>
+                    </div>
+                )}
+
                 {status === 'downloading' && (
                     <div style={{ marginBottom: '16px' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', marginBottom: '6px' }}>
-                            <span>Stahování aktualizace...</span>
+                            <span>Stahování {isUsingInstaller ? 'instalátoru' : 'aktualizace'}...</span>
                             <span>{progress.toFixed(0)}% ({downloadedMB} / {totalMB} MB)</span>
                         </div>
                         <div style={{
@@ -235,7 +272,7 @@ export function UpdateModal({ isOpen, onClose, updateInfo }: UpdateModalProps) {
                             <line x1="4.93" y1="19.07" x2="7.76" y2="16.24"></line>
                             <line x1="16.24" y1="7.76" x2="19.07" y2="4.93"></line>
                         </svg>
-                        Instalace aktualizace a příprava aplikace...
+                        {isUsingInstaller ? 'Příprava instalátoru ke spuštění...' : 'Instalace aktualizace a příprava aplikace...'}
                     </div>
                 )}
 
@@ -256,7 +293,11 @@ export function UpdateModal({ isOpen, onClose, updateInfo }: UpdateModalProps) {
                             <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
                             <polyline points="22 4 12 14.01 9 11.01"></polyline>
                         </svg>
-                        <span>Aktualizace byla úspěšně nainstalována! Restartujte aplikaci pro dokončení.</span>
+                        <span>
+                            {isUsingInstaller 
+                                ? 'Instalátor je připraven! Kliknutím níže jej spustíte.'
+                                : 'Aktualizace byla úspěšně nainstalována! Restartujte aplikaci pro dokončení.'}
+                        </span>
                     </div>
                 )}
 
@@ -281,7 +322,7 @@ export function UpdateModal({ isOpen, onClose, updateInfo }: UpdateModalProps) {
                             onClick={handleRestart}
                             style={{ background: '#10b981', borderColor: '#10b981' }}
                         >
-                            Restartovat aplikaci nyní
+                            {isUsingInstaller ? 'Otevřít instalátor' : 'Restartovat aplikaci nyní'}
                         </button>
                     ) : (
                         <>
@@ -294,11 +335,11 @@ export function UpdateModal({ isOpen, onClose, updateInfo }: UpdateModalProps) {
                             </button>
                             <button
                                 className="btn btn-primary"
-                                onClick={handleStartUpdate}
+                                onClick={() => handleStartUpdate()}
                                 disabled={status === 'downloading' || status === 'applying'}
                                 style={{ background: '#10b981', borderColor: '#10b981' }}
                             >
-                                {status === 'downloading' ? 'Stahování...' : status === 'applying' ? 'Instalace...' : 'Aktualizovat nyní'}
+                                {status === 'downloading' ? 'Stahování...' : status === 'applying' ? 'Příprava...' : 'Aktualizovat nyní'}
                             </button>
                         </>
                     )}

@@ -11,7 +11,7 @@ permissions:
 
 jobs:
   build-windows:
-    name: Build Windows Application
+    name: Build Windows Application & Installer
     runs-on: windows-latest
 
     steps:
@@ -38,18 +38,23 @@ jobs:
         working-directory: frontend
         run: npm ci
 
-      - name: Build Wails App for Windows
-        run: wails build -platform windows/amd64 -clean
+      - name: Build Wails App & NSIS Installer for Windows
+        run: wails build -platform windows/amd64 -nsis -clean
 
-      - name: Copy alternate binary name
+      - name: Prepare Release Artifacts
         run: |
           Copy-Item build\bin\lab411-vm-manager.exe build\bin\vm-manager.exe
+          Copy-Item build\bin\lab411-vm-manager-amd64-installer.exe build\bin\lab411-vm-manager-installer.exe
+          Copy-Item build\bin\lab411-vm-manager-amd64-installer.exe build\bin\vm-manager-installer.exe
 
-      - name: Upload Windows Artifact
+      - name: Upload Windows Artifacts
         uses: actions/upload-artifact@v4
         with:
           name: lab411-vm-manager-windows-amd64
           path: |
+            build/bin/lab411-vm-manager-amd64-installer.exe
+            build/bin/lab411-vm-manager-installer.exe
+            build/bin/vm-manager-installer.exe
             build/bin/lab411-vm-manager.exe
             build/bin/vm-manager.exe
 
@@ -58,6 +63,9 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/')
         with:
           files: |
+            build/bin/lab411-vm-manager-amd64-installer.exe
+            build/bin/lab411-vm-manager-installer.exe
+            build/bin/vm-manager-installer.exe
             build/bin/lab411-vm-manager.exe
             build/bin/vm-manager.exe
           draft: false

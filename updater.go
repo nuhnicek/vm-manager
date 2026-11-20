@@ -18,7 +18,7 @@ import (
 )
 
 const (
-	AppVersion      = "v1.0.0"
+	AppVersion      = "v1.0.1"
 	GitHubRepoOwner = "nuhnicek"
 	GitHubRepoName  = "vm-manager"
 )
@@ -49,6 +49,9 @@ type UpdateInfo struct {
 	DownloadURL    string `json:"download_url"`
 	AssetSize      int64  `json:"asset_size"`
 	AssetName      string `json:"asset_name"`
+	InstallerURL   string `json:"installer_url,omitempty"`
+	InstallerName  string `json:"installer_name,omitempty"`
+	InstallerSize  int64  `json:"installer_size,omitempty"`
 	HasUpdate      bool   `json:"has_update"`
 }
 
@@ -59,6 +62,8 @@ type UpdateProgress struct {
 	Status          string  `json:"status"` // "downloading", "applying", "ready_to_restart", "error"
 	Error           string  `json:"error,omitempty"`
 }
+
+var pendingInstallerPath string
 
 func (a *App) GetAppVersion() string {
 	return AppVersion
@@ -104,31 +109,44 @@ func isNewerVersion(current, latest string) bool {
 	return false
 }
 
-func findCompatibleAsset(assets []GitHubReleaseAsset) *GitHubReleaseAsset {
+func findAssets(assets []GitHubReleaseAsset) (binaryAsset *GitHubReleaseAsset, installerAsset *GitHubReleaseAsset) {
 	goos := runtime.GOOS // "windows", "linux", "darwin"
+
 	for _, asset := range assets {
 		lower := strings.ToLower(asset.Name)
-		if goos == "windows" {
+		if strings.Contains(lower, "installer") && strings.HasSuffix(lower, ".exe") {
+			a := asset
+			installerAsset = &a
+		} else if goos == "windows" && strings.HasSuffix(lower, ".exe") && !strings.Contains(lower, "installer") {
+			a := asset
+			binaryAsset = &a
+		} else if goos == "linux" && !strings.HasSuffix(lower, ".exe") && !strings.HasSuffix(lower, ".zip") && !strings.HasSuffix(lower, ".tar.gz") {
+			a := asset
+			binaryAsset = &a
+		}
+	}
+
+	// If no dedicated portable binary was found, but installer exists, fallback to installer
+	if binaryAsset == nil && installerAsset != nil {
+		binaryAsset = installerAsset
+	}
+
+	// Fallback to first asset if nothing matched OS
+	if binaryAsset == nil && len(assets) > 0 {
+		for _, asset := range assets {
+			lower := strings.ToLower(asset.Name)
 			if strings.HasSuffix(lower, ".exe") {
-				return &asset
-			}
-		} else if goos == "linux" {
-			if !strings.HasSuffix(lower, ".exe") && !strings.HasSuffix(lower, ".zip") && !strings.HasSuffix(lower, ".tar.gz") {
-				return &asset
+				a := asset
+				binaryAsset = &a
+				break
 			}
 		}
-	}
-	// Fallback: if only .exe is available or general asset
-	for _, asset := range assets {
-		lower := strings.ToLower(asset.Name)
-		if strings.HasSuffix(lower, ".exe") {
-			return &asset
+		if binaryAsset == nil {
+			binaryAsset = &assets[0]
 		}
 	}
-	if len(assets) > 0 {
-		return &assets[0]
-	}
-	return nil
+
+	return binaryAsset, installerAsset
 }
 
 func (a *App) CheckForUpdate() (*UpdateInfo, error) {
@@ -158,7 +176,6 @@ func (a *App) CheckForUpdate() (*UpdateInfo, error) {
 	defer resp.Body.Close()
 
 	if resp.StatusCode == http.StatusNotFound || resp.StatusCode == http.StatusForbidden || resp.StatusCode == http.StatusTooManyRequests {
-		// No release yet published or rate limited
 		return &UpdateInfo{
 			CurrentVersion: AppVersion,
 			HasUpdate:      false,
@@ -177,12 +194,19 @@ func (a *App) CheckForUpdate() (*UpdateInfo, error) {
 	hasUpdate := isNewerVersion(AppVersion, rel.TagName)
 	var downloadURL, assetName string
 	var assetSize int64
+	var installerURL, installerName string
+	var installerSize int64
 
-	asset := findCompatibleAsset(rel.Assets)
-	if asset != nil {
-		downloadURL = asset.BrowserDownloadURL
-		assetName = asset.Name
-		assetSize = asset.Size
+	binAsset, instAsset := findAssets(rel.Assets)
+	if binAsset != nil {
+		downloadURL = binAsset.BrowserDownloadURL
+		assetName = binAsset.Name
+		assetSize = binAsset.Size
+	}
+	if instAsset != nil {
+		installerURL = instAsset.BrowserDownloadURL
+		installerName = instAsset.Name
+		installerSize = instAsset.Size
 	}
 
 	return &UpdateInfo{
@@ -194,6 +218,9 @@ func (a *App) CheckForUpdate() (*UpdateInfo, error) {
 		DownloadURL:    downloadURL,
 		AssetSize:      assetSize,
 		AssetName:      assetName,
+		InstallerURL:   installerURL,
+		InstallerName:  installerName,
+		InstallerSize:  installerSize,
 		HasUpdate:      hasUpdate,
 	}, nil
 }
@@ -248,9 +275,11 @@ func (a *App) DownloadAndApplyUpdate(downloadURL string) error {
 	}
 	tempPath := tempFile.Name()
 	defer func() {
-		tempFile.Close()
-		if _, err := os.Stat(tempPath); err == nil {
-			_ = os.Remove(tempPath)
+		_ = tempFile.Close()
+		if pendingInstallerPath == "" {
+			if _, err := os.Stat(tempPath); err == nil {
+				_ = os.Remove(tempPath)
+			}
 		}
 	}()
 
@@ -303,6 +332,25 @@ func (a *App) DownloadAndApplyUpdate(downloadURL string) error {
 		Status:          "applying",
 	})
 
+	isInstaller := strings.Contains(strings.ToLower(downloadURL), "installer")
+
+	if isInstaller && runtime.GOOS == "windows" {
+		targetInstaller := filepath.Join(os.TempDir(), "lab411-installer.exe")
+		_ = os.Remove(targetInstaller)
+		if err := copyFile(tempPath, targetInstaller); err != nil {
+			return fmt.Errorf("chyba při přípravě instalátoru: %w", err)
+		}
+		pendingInstallerPath = targetInstaller
+
+		wruntime.EventsEmit(a.ctx, "update-progress", UpdateProgress{
+			DownloadedBytes: downloadedBytes,
+			TotalBytes:      totalBytes,
+			Percentage:      100,
+			Status:          "ready_to_restart",
+		})
+		return nil
+	}
+
 	execPath, err := os.Executable()
 	if err != nil {
 		return fmt.Errorf("nelze určit cestu ke spuštěné aplikaci: %w", err)
@@ -345,6 +393,18 @@ func (a *App) DownloadAndApplyUpdate(downloadURL string) error {
 }
 
 func (a *App) RestartApp() error {
+	if pendingInstallerPath != "" && runtime.GOOS == "windows" {
+		cmd := exec.Command(pendingInstallerPath)
+		if err := cmd.Start(); err != nil {
+			return fmt.Errorf("nelze spustit instalační program: %w", err)
+		}
+		go func() {
+			time.Sleep(300 * time.Millisecond)
+			os.Exit(0)
+		}()
+		return nil
+	}
+
 	execPath, err := os.Executable()
 	if err != nil {
 		return err

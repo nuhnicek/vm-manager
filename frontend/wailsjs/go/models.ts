@@ -67,6 +67,9 @@ export namespace main {
 	    download_url: string;
 	    asset_size: number;
 	    asset_name: string;
+	    installer_url?: string;
+	    installer_name?: string;
+	    installer_size?: number;
 	    has_update: boolean;
 	
 	    static createFrom(source: any = {}) {
@@ -83,6 +86,9 @@ export namespace main {
 	        this.download_url = source["download_url"];
 	        this.asset_size = source["asset_size"];
 	        this.asset_name = source["asset_name"];
+	        this.installer_url = source["installer_url"];
+	        this.installer_name = source["installer_name"];
+	        this.installer_size = source["installer_size"];
 	        this.has_update = source["has_update"];
 	    }
 	}
