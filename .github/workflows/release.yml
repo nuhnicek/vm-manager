@@ -41,23 +41,25 @@ jobs:
       - name: Build Wails App & NSIS Installer for Windows
         run: wails build -platform windows/amd64 -nsis -clean
 
-      - name: Prepare Release Artifacts
+      - name: Prepare Release Artifacts (.zip and installer)
         run: |
           Copy-Item config.json build\bin\config.json
           Copy-Item build\bin\lab411-vm-manager.exe build\bin\vm-manager.exe
           Copy-Item build\bin\lab411-vm-manager-amd64-installer.exe build\bin\lab411-vm-manager-installer.exe
           Copy-Item build\bin\lab411-vm-manager-amd64-installer.exe build\bin\vm-manager-installer.exe
+          Compress-Archive -Path build\bin\lab411-vm-manager.exe, config.json -DestinationPath build\bin\lab411-vm-manager-windows-amd64.zip
+          Copy-Item build\bin\lab411-vm-manager-windows-amd64.zip build\bin\vm-manager-windows-amd64.zip
 
       - name: Upload Windows Artifacts
         uses: actions/upload-artifact@v4
         with:
           name: lab411-vm-manager-windows-amd64
           path: |
+            build/bin/lab411-vm-manager-windows-amd64.zip
+            build/bin/vm-manager-windows-amd64.zip
             build/bin/lab411-vm-manager-amd64-installer.exe
             build/bin/lab411-vm-manager-installer.exe
             build/bin/vm-manager-installer.exe
-            build/bin/lab411-vm-manager.exe
-            build/bin/vm-manager.exe
             config.json
 
       - name: Publish GitHub Release (Windows)
@@ -65,11 +67,11 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/')
         with:
           files: |
+            build/bin/lab411-vm-manager-windows-amd64.zip
+            build/bin/vm-manager-windows-amd64.zip
             build/bin/lab411-vm-manager-amd64-installer.exe
             build/bin/lab411-vm-manager-installer.exe
             build/bin/vm-manager-installer.exe
-            build/bin/lab411-vm-manager.exe
-            build/bin/vm-manager.exe
             config.json
           draft: false
           prerelease: false
@@ -111,7 +113,7 @@ jobs:
       - name: Build Wails App for Linux
         run: wails build -platform linux/amd64 -tags webkit2_41 -clean
 
-      - name: Package Linux Binary, Archive & Deb
+      - name: Package Linux Binary, Archive (.tar.gz) & Deb
         run: |
           cd build/bin
           cp lab411-vm-manager lab411-vm-manager-linux-amd64
@@ -119,6 +121,7 @@ jobs:
           cp lab411-vm-manager vm-manager
           cp ../../config.json ./config.json
           tar -czvf lab411-vm-manager-linux-amd64.tar.gz lab411-vm-manager config.json
+          cp lab411-vm-manager-linux-amd64.tar.gz vm-manager-linux-amd64.tar.gz
 
           # Build Debian package
           mkdir -p /tmp/lab411-deb/DEBIAN /tmp/lab411-deb/usr/bin /tmp/lab411-deb/usr/share/applications /tmp/lab411-deb/usr/share/pixmaps /tmp/lab411-deb/etc/lab411
@@ -156,19 +159,21 @@ jobs:
         with:
           name: lab411-vm-manager-linux-amd64
           path: |
-            build/bin/lab411-vm-manager-linux-amd64
-            build/bin/vm-manager-linux
             build/bin/lab411-vm-manager-linux-amd64.tar.gz
+            build/bin/vm-manager-linux-amd64.tar.gz
             build/bin/lab411-vm-manager_1.0.1_amd64.deb
+            build/bin/lab411-vm-manager-linux-amd64
+            config.json
 
       - name: Publish GitHub Release (Linux)
         uses: softprops/action-gh-release@v2
         if: startsWith(github.ref, 'refs/tags/')
         with:
           files: |
-            build/bin/lab411-vm-manager-linux-amd64
-            build/bin/vm-manager-linux
             build/bin/lab411-vm-manager-linux-amd64.tar.gz
+            build/bin/vm-manager-linux-amd64.tar.gz
             build/bin/lab411-vm-manager_1.0.1_amd64.deb
+            build/bin/lab411-vm-manager-linux-amd64
+            config.json
           draft: false
           prerelease: false

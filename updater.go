@@ -1,6 +1,9 @@
 package main
 
 import (
+	"archive/tar"
+	"archive/zip"
+	"compress/gzip"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -117,37 +120,55 @@ func findAssets(assets []GitHubReleaseAsset) (binaryAsset *GitHubReleaseAsset, i
 		if strings.Contains(lower, "installer") && strings.HasSuffix(lower, ".exe") {
 			a := asset
 			installerAsset = &a
-		} else if goos == "windows" && strings.HasSuffix(lower, ".exe") && !strings.Contains(lower, "installer") {
-			a := asset
-			binaryAsset = &a
-		} else if goos == "linux" && (strings.Contains(lower, "linux") || lower == "lab411-vm-manager" || lower == "vm-manager") && !strings.HasSuffix(lower, ".json") && !strings.HasSuffix(lower, ".exe") && !strings.HasSuffix(lower, ".txt") && !strings.HasSuffix(lower, ".md") {
-			a := asset
-			binaryAsset = &a
-		}
-	}
-
-	// Fallback: if no OS-specific binary was found, prefer non-installer .exe
-	if binaryAsset == nil {
-		for _, asset := range assets {
-			lower := strings.ToLower(asset.Name)
-			if !strings.Contains(lower, "installer") && strings.HasSuffix(lower, ".exe") {
+		} else if goos == "windows" {
+			// Prioritize .zip archive, or portable standalone .exe
+			if strings.HasSuffix(lower, ".zip") && (strings.Contains(lower, "win") || strings.Contains(lower, "lab411") || strings.Contains(lower, "vm-manager")) {
 				a := asset
 				binaryAsset = &a
-				break
+			} else if binaryAsset == nil && strings.HasSuffix(lower, ".exe") && !strings.Contains(lower, "installer") {
+				a := asset
+				binaryAsset = &a
+			}
+		} else if goos == "linux" {
+			// Prioritize .tar.gz archive, or standalone linux binary
+			if (strings.HasSuffix(lower, ".tar.gz") || strings.HasSuffix(lower, ".tgz")) && (strings.Contains(lower, "linux") || strings.Contains(lower, "lab411") || strings.Contains(lower, "vm-manager")) {
+				a := asset
+				binaryAsset = &a
+			} else if binaryAsset == nil && (strings.Contains(lower, "linux") || lower == "lab411-vm-manager" || lower == "vm-manager") && !strings.HasSuffix(lower, ".json") && !strings.HasSuffix(lower, ".deb") && !strings.HasSuffix(lower, ".exe") {
+				a := asset
+				binaryAsset = &a
 			}
 		}
 	}
 
-	// If still no dedicated portable binary was found, but installer exists, fallback to installer
+	// Fallback: if no dedicated archive was found for OS
+	if binaryAsset == nil {
+		for _, asset := range assets {
+			lower := strings.ToLower(asset.Name)
+			if goos == "windows" && (strings.HasSuffix(lower, ".zip") || (strings.HasSuffix(lower, ".exe") && !strings.Contains(lower, "installer"))) {
+				a := asset
+				binaryAsset = &a
+				break
+			} else if goos == "linux" && (strings.HasSuffix(lower, ".tar.gz") || strings.HasSuffix(lower, ".tgz") || strings.Contains(lower, "linux")) {
+				if !strings.HasSuffix(lower, ".json") && !strings.HasSuffix(lower, ".deb") && !strings.HasSuffix(lower, ".exe") {
+					a := asset
+					binaryAsset = &a
+					break
+				}
+			}
+		}
+	}
+
+	// If still no dedicated portable binary/archive was found, but installer exists, fallback to installer
 	if binaryAsset == nil && installerAsset != nil {
 		binaryAsset = installerAsset
 	}
 
-	// Fallback to first asset if nothing matched OS
+	// Fallback to first suitable asset
 	if binaryAsset == nil && len(assets) > 0 {
 		for _, asset := range assets {
 			lower := strings.ToLower(asset.Name)
-			if strings.HasSuffix(lower, ".exe") {
+			if strings.HasSuffix(lower, ".zip") || strings.HasSuffix(lower, ".tar.gz") || strings.HasSuffix(lower, ".exe") {
 				a := asset
 				binaryAsset = &a
 				break
@@ -245,6 +266,79 @@ func (a *App) CheckForUpdate() (*UpdateInfo, error) {
 		InstallerSize:  installerSize,
 		HasUpdate:      hasUpdate,
 	}, nil
+}
+
+func extractBinaryFromZip(zipPath string) (string, error) {
+	r, err := zip.OpenReader(zipPath)
+	if err != nil {
+		return "", fmt.Errorf("nelze otevřít zip archiv: %w", err)
+	}
+	defer r.Close()
+
+	for _, f := range r.File {
+		lower := strings.ToLower(f.Name)
+		if strings.HasSuffix(lower, ".exe") && !strings.Contains(lower, "installer") {
+			rc, err := f.Open()
+			if err != nil {
+				return "", err
+			}
+			defer rc.Close()
+
+			tmp, err := os.CreateTemp("", "lab411-unzipped-*.exe")
+			if err != nil {
+				return "", err
+			}
+			defer tmp.Close()
+
+			if _, err := io.Copy(tmp, rc); err != nil {
+				_ = os.Remove(tmp.Name())
+				return "", err
+			}
+			return tmp.Name(), nil
+		}
+	}
+	return "", fmt.Errorf("žádný spustitelný soubor .exe nebyl nalezen v zip archivu")
+}
+
+func extractBinaryFromTarGz(tarGzPath string) (string, error) {
+	f, err := os.Open(tarGzPath)
+	if err != nil {
+		return "", fmt.Errorf("nelze otevřít tar.gz archiv: %w", err)
+	}
+	defer f.Close()
+
+	gzr, err := gzip.NewReader(f)
+	if err != nil {
+		return "", fmt.Errorf("nelze inicializovat gzip dekompresi: %w", err)
+	}
+	defer gzr.Close()
+
+	tr := tar.NewReader(gzr)
+	for {
+		hdr, err := tr.Next()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return "", err
+		}
+		base := filepath.Base(hdr.Name)
+		if base == "lab411-vm-manager" || base == "vm-manager" || (!strings.HasSuffix(base, ".json") && !strings.Contains(base, ".")) {
+			tmp, err := os.CreateTemp("", "lab411-untarred-*")
+			if err != nil {
+				return "", err
+			}
+			defer tmp.Close()
+
+			if _, err := io.Copy(tmp, tr); err != nil {
+				_ = os.Remove(tmp.Name())
+				return "", err
+			}
+			_ = os.Chmod(tmp.Name(), 0755)
+			return tmp.Name(), nil
+		}
+	}
+	return "", fmt.Errorf("žádný spustitelný soubor nebyl nalezen v tar.gz archivu")
 }
 
 func copyFile(src, dst string) error {
@@ -373,6 +467,24 @@ func (a *App) DownloadAndApplyUpdate(downloadURL string) error {
 		return nil
 	}
 
+	sourceBinaryPath := tempPath
+	lowerURL := strings.ToLower(downloadURL)
+	if strings.HasSuffix(lowerURL, ".zip") {
+		unpacked, err := extractBinaryFromZip(tempPath)
+		if err != nil {
+			return fmt.Errorf("chyba při rozbalování zip aktualizace: %w", err)
+		}
+		sourceBinaryPath = unpacked
+		defer os.Remove(unpacked)
+	} else if strings.HasSuffix(lowerURL, ".tar.gz") || strings.HasSuffix(lowerURL, ".tgz") {
+		unpacked, err := extractBinaryFromTarGz(tempPath)
+		if err != nil {
+			return fmt.Errorf("chyba při rozbalování tar.gz aktualizace: %w", err)
+		}
+		sourceBinaryPath = unpacked
+		defer os.Remove(unpacked)
+	}
+
 	execPath, err := os.Executable()
 	if err != nil {
 		return fmt.Errorf("nelze určit cestu ke spuštěné aplikaci: %w", err)
@@ -388,16 +500,16 @@ func (a *App) DownloadAndApplyUpdate(downloadURL string) error {
 		if err := os.Rename(execPath, oldPath); err != nil {
 			return fmt.Errorf("nelze přejmenovat běžící binárku: %w", err)
 		}
-		if err := copyFile(tempPath, execPath); err != nil {
+		if err := copyFile(sourceBinaryPath, execPath); err != nil {
 			_ = os.Rename(oldPath, execPath)
 			return fmt.Errorf("nelze zapsat novou binárku do %s: %w", execPath, err)
 		}
 	} else {
-		if err := os.Chmod(tempPath, 0755); err != nil {
+		if err := os.Chmod(sourceBinaryPath, 0755); err != nil {
 			return fmt.Errorf("nelze nastavit práva spustitelnosti: %w", err)
 		}
-		if err := os.Rename(tempPath, execPath); err != nil {
-			if err := copyFile(tempPath, execPath); err != nil {
+		if err := os.Rename(sourceBinaryPath, execPath); err != nil {
+			if err := copyFile(sourceBinaryPath, execPath); err != nil {
 				return fmt.Errorf("nelze nahradit binárku: %w", err)
 			}
 			_ = os.Chmod(execPath, 0755)

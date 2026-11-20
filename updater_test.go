@@ -33,8 +33,9 @@ func TestSemverComparison(t *testing.T) {
 func TestAssetMatching(t *testing.T) {
 	assets := []GitHubReleaseAsset{
 		{Name: "lab411-vm-manager-amd64-installer.exe", BrowserDownloadURL: "https://example.com/installer.exe"},
-		{Name: "lab411-vm-manager.exe", BrowserDownloadURL: "https://example.com/win.exe"},
-		{Name: "lab411-vm-manager-linux", BrowserDownloadURL: "https://example.com/linux"},
+		{Name: "lab411-vm-manager-windows-amd64.zip", BrowserDownloadURL: "https://example.com/win.zip"},
+		{Name: "lab411-vm-manager-linux-amd64.tar.gz", BrowserDownloadURL: "https://example.com/linux.tar.gz"},
+		{Name: "config.json", BrowserDownloadURL: "https://example.com/config.json"},
 	}
 
 	binAsset, instAsset := findAssets(assets)
@@ -47,8 +48,11 @@ func TestAssetMatching(t *testing.T) {
 	if instAsset.Name != "lab411-vm-manager-amd64-installer.exe" {
 		t.Errorf("expected installer name lab411-vm-manager-amd64-installer.exe, got %s", instAsset.Name)
 	}
-	if runtime.GOOS == "linux" && binAsset.Name != "lab411-vm-manager-linux" {
-		t.Errorf("expected linux binary name lab411-vm-manager-linux, got %s", binAsset.Name)
+	if runtime.GOOS == "linux" && binAsset.Name != "lab411-vm-manager-linux-amd64.tar.gz" {
+		t.Errorf("expected linux asset name lab411-vm-manager-linux-amd64.tar.gz, got %s", binAsset.Name)
+	}
+	if runtime.GOOS == "windows" && binAsset.Name != "lab411-vm-manager-windows-amd64.zip" {
+		t.Errorf("expected windows asset name lab411-vm-manager-windows-amd64.zip, got %s", binAsset.Name)
 	}
 }
 
