@@ -126,7 +126,19 @@ func findAssets(assets []GitHubReleaseAsset) (binaryAsset *GitHubReleaseAsset, i
 		}
 	}
 
-	// If no dedicated portable binary was found, but installer exists, fallback to installer
+	// Fallback: if no OS-specific binary was found, prefer non-installer .exe
+	if binaryAsset == nil {
+		for _, asset := range assets {
+			lower := strings.ToLower(asset.Name)
+			if !strings.Contains(lower, "installer") && strings.HasSuffix(lower, ".exe") {
+				a := asset
+				binaryAsset = &a
+				break
+			}
+		}
+	}
+
+	// If still no dedicated portable binary was found, but installer exists, fallback to installer
 	if binaryAsset == nil && installerAsset != nil {
 		binaryAsset = installerAsset
 	}
