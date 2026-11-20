@@ -535,7 +535,7 @@ func (a *App) CreateVMFromTemplate(name string, templateID string) (*VM, error) 
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", a.authToken)
 
-	client := &http.Client{Timeout: 3 * time.Minute}
+	client := &http.Client{Timeout: 15 * time.Minute}
 	resp, err := client.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("failed to reach backend at %s: %v", a.backendURL, err)
@@ -633,7 +633,7 @@ func (a *App) CreateVMOnNode(name string, templateID string, node string) (*VM, 
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", a.authToken)
 
-	client := &http.Client{Timeout: 3 * time.Minute}
+	client := &http.Client{Timeout: 15 * time.Minute}
 	resp, err := client.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("failed to reach backend at %s: %v", a.backendURL, err)
