@@ -60,7 +60,7 @@ jobs:
             build/bin/vm-manager.exe
             config.json
 
-      - name: Publish GitHub Release
+      - name: Publish GitHub Release (Windows)
         uses: softprops/action-gh-release@v2
         if: startsWith(github.ref, 'refs/tags/')
         with:
@@ -74,3 +74,101 @@ jobs:
           draft: false
           prerelease: false
           generate_release_notes: true
+
+  build-linux:
+    name: Build Linux Application & Deb Package
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Linux Build Dependencies
+        run: |
+          sudo apt update
+          sudo apt install -y libgtk-3-dev libwebkit2gtk-4.1-dev
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+          cache: true
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install Wails CLI
+        run: go install github.com/wailsapp/wails/v2/cmd/wails@v2.16.0
+
+      - name: Install Frontend Dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Build Wails App for Linux
+        run: wails build -platform linux/amd64 -tags webkit2_41 -clean
+
+      - name: Package Linux Binary, Archive & Deb
+        run: |
+          cd build/bin
+          cp lab411-vm-manager lab411-vm-manager-linux-amd64
+          cp lab411-vm-manager vm-manager-linux
+          cp lab411-vm-manager vm-manager
+          cp ../../config.json ./config.json
+          tar -czvf lab411-vm-manager-linux-amd64.tar.gz lab411-vm-manager config.json
+
+          # Build Debian package
+          mkdir -p /tmp/lab411-deb/DEBIAN /tmp/lab411-deb/usr/bin /tmp/lab411-deb/usr/share/applications /tmp/lab411-deb/usr/share/pixmaps /tmp/lab411-deb/etc/lab411
+          cat << 'EOF' > /tmp/lab411-deb/DEBIAN/control
+          Package: lab411-vm-manager
+          Version: 1.0.1
+          Section: utils
+          Priority: optional
+          Architecture: amd64
+          Maintainer: Petr Beunier <petrixbeu@gmail.com>
+          Depends: libgtk-3-0, libwebkit2gtk-4.1-0 | libwebkit2gtk-4.0-37
+          Description: Lab411 VM Manager
+           GUI client for managing Proxmox VE virtual machines and network topologies.
+          EOF
+
+          cat << 'EOF' > /tmp/lab411-deb/usr/share/applications/lab411-vm-manager.desktop
+          [Desktop Entry]
+          Name=Lab411 VM Manager
+          Comment=Manage Proxmox VE VMs and Labs
+          Exec=/usr/bin/lab411-vm-manager
+          Icon=lab411-vm-manager
+          Terminal=false
+          Type=Application
+          Categories=Development;System;Network;
+          EOF
+
+          cp lab411-vm-manager /tmp/lab411-deb/usr/bin/lab411-vm-manager
+          chmod +x /tmp/lab411-deb/usr/bin/lab411-vm-manager
+          cp ../appicon.png /tmp/lab411-deb/usr/share/pixmaps/lab411-vm-manager.png
+          cp ./config.json /tmp/lab411-deb/etc/lab411/config.json
+          dpkg-deb --build /tmp/lab411-deb lab411-vm-manager_1.0.1_amd64.deb
+
+      - name: Upload Linux Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: lab411-vm-manager-linux-amd64
+          path: |
+            build/bin/lab411-vm-manager-linux-amd64
+            build/bin/vm-manager-linux
+            build/bin/lab411-vm-manager-linux-amd64.tar.gz
+            build/bin/lab411-vm-manager_1.0.1_amd64.deb
+
+      - name: Publish GitHub Release (Linux)
+        uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: |
+            build/bin/lab411-vm-manager-linux-amd64
+            build/bin/vm-manager-linux
+            build/bin/lab411-vm-manager-linux-amd64.tar.gz
+            build/bin/lab411-vm-manager_1.0.1_amd64.deb
+          draft: false
+          prerelease: false

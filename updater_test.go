@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"runtime"
 	"testing"
 )
 
@@ -45,6 +46,9 @@ func TestAssetMatching(t *testing.T) {
 	}
 	if instAsset.Name != "lab411-vm-manager-amd64-installer.exe" {
 		t.Errorf("expected installer name lab411-vm-manager-amd64-installer.exe, got %s", instAsset.Name)
+	}
+	if runtime.GOOS == "linux" && binAsset.Name != "lab411-vm-manager-linux" {
+		t.Errorf("expected linux binary name lab411-vm-manager-linux, got %s", binAsset.Name)
 	}
 }
 

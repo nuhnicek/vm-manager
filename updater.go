@@ -120,7 +120,7 @@ func findAssets(assets []GitHubReleaseAsset) (binaryAsset *GitHubReleaseAsset, i
 		} else if goos == "windows" && strings.HasSuffix(lower, ".exe") && !strings.Contains(lower, "installer") {
 			a := asset
 			binaryAsset = &a
-		} else if goos == "linux" && !strings.HasSuffix(lower, ".exe") && !strings.HasSuffix(lower, ".zip") && !strings.HasSuffix(lower, ".tar.gz") {
+		} else if goos == "linux" && (strings.Contains(lower, "linux") || lower == "lab411-vm-manager" || lower == "vm-manager") && !strings.HasSuffix(lower, ".json") && !strings.HasSuffix(lower, ".exe") && !strings.HasSuffix(lower, ".txt") && !strings.HasSuffix(lower, ".md") {
 			a := asset
 			binaryAsset = &a
 		}
