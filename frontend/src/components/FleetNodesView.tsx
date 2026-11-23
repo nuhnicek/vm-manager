@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { ProxmoxNode, FleetVM } from '../types';
 import { ConfirmModal } from './ConfirmModal';
+import { apiFetch } from '../api';
 
 interface FleetNodesViewProps {
     nodes: ProxmoxNode[];
@@ -54,15 +55,9 @@ export function FleetNodesView({
         setIsLoading(true);
         try {
             let resp: Response;
-            try {
-                resp = await fetch('/teacher/vms', {
+            resp = await apiFetch('/teacher/vms', {
                     headers: { 'Authorization': token }
                 });
-            } catch {
-                resp = await fetch('http://10.0.10.52:8080/teacher/vms', {
-                    headers: { 'Authorization': token }
-                });
-            }
             if (resp.ok) {
                 const data = await resp.json();
                 setFleetVMs(data || []);
@@ -88,19 +83,11 @@ export function FleetNodesView({
                 try {
                     let resp: Response;
                     const payload = { action: 'stop_all' };
-                    try {
-                        resp = await fetch('/teacher/vms/bulk-action', {
+                    resp = await apiFetch('/teacher/vms/bulk-action', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json', 'Authorization': token },
                             body: JSON.stringify(payload)
                         });
-                    } catch {
-                        resp = await fetch('http://10.0.10.52:8080/teacher/vms/bulk-action', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json', 'Authorization': token },
-                            body: JSON.stringify(payload)
-                        });
-                    }
                     if (!resp.ok) {
                         const err = await resp.json().catch(() => ({}));
                         throw new Error(err.error || `Server responded with ${resp.status}`);
@@ -141,19 +128,11 @@ export function FleetNodesView({
         try {
             let resp: Response;
             const payload = { vmid: Number(vm.id), node: nodeStr };
-            try {
-                resp = await fetch(endpoint, {
+            resp = await apiFetch(endpoint, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'Authorization': token },
                     body: JSON.stringify(payload)
                 });
-            } catch {
-                resp = await fetch(`http://10.0.10.52:8080${endpoint}`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'Authorization': token },
-                    body: JSON.stringify(payload)
-                });
-            }
             if (!resp.ok) {
                 const err = await resp.json().catch(() => ({}));
                 throw new Error(err.error || `Server responded with ${resp.status}`);
@@ -178,11 +157,11 @@ export function FleetNodesView({
 
     const filteredVMs = fleetVMs.filter(vm => {
         if (selectedNodeFilter && vm.node !== selectedNodeFilter) return false;
-        if (statusFilter === 'running' && !vm.status.toLowerCase().includes('run')) return false;
-        if (statusFilter === 'stopped' && vm.status.toLowerCase().includes('run')) return false;
+        if (statusFilter === 'running' && !(vm.status || '').toLowerCase().includes('run')) return false;
+        if (statusFilter === 'stopped' && (vm.status || '').toLowerCase().includes('run')) return false;
         if (searchQuery.trim()) {
             const q = searchQuery.toLowerCase().trim();
-            const matchName = vm.name.toLowerCase().includes(q);
+            const matchName = (vm.name || '').toLowerCase().includes(q);
             const matchId = String(vm.id).includes(q);
             const matchNode = (vm.node || '').toLowerCase().includes(q);
             const matchOwner = (vm.owner_email || vm.owner || vm.owner_uuid || '').toLowerCase().includes(q);
@@ -191,7 +170,7 @@ export function FleetNodesView({
         return true;
     });
 
-    const runningCount = fleetVMs.filter(v => v.status.toLowerCase().includes('run')).length;
+    const runningCount = fleetVMs.filter(v => (v.status || '').toLowerCase().includes('run')).length;
     const stoppedCount = fleetVMs.length - runningCount;
     const totalRAMMB = fleetVMs.reduce((acc, v) => acc + (v.ram_mb || 0), 0);
     const onlineNodesCount = nodes.filter(n => n.status === 'online').length;
@@ -333,7 +312,7 @@ export function FleetNodesView({
                     </thead>
                     <tbody>
                         {filteredVMs.map(vm => {
-                            const isRunning = vm.status.toLowerCase().includes('run');
+                            const isRunning = (vm.status || '').toLowerCase().includes('run');
                             return (
                                 <tr key={`${vm.node || 'pve'}-${vm.id}`}>
                                     <td>

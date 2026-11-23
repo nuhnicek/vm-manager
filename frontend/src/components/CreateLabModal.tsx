@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { LabTemplate, LabVMTemplate, LabNetworkLink } from '../types';
 import { main } from '../../wailsjs/go/models';
+import { apiFetch } from '../api';
 
 interface CreateLabModalProps {
     isOpen: boolean;
@@ -144,8 +145,7 @@ export function CreateLabModal({ isOpen, onClose, templates, token, onLabCreated
             };
 
             let resp: Response;
-            try {
-                resp = await fetch('/labs/templates', {
+            resp = await apiFetch('/labs/templates', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -153,16 +153,6 @@ export function CreateLabModal({ isOpen, onClose, templates, token, onLabCreated
                     },
                     body: JSON.stringify(payload)
                 });
-            } catch {
-                resp = await fetch('http://10.0.10.52:8080/labs/templates', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': token
-                    },
-                    body: JSON.stringify(payload)
-                });
-            }
 
             if (!resp.ok) {
                 const errData = await resp.json().catch(() => ({}));

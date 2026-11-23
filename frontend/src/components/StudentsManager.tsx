@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { TeacherStudentInfo } from '../types';
 import { ConfirmModal } from './ConfirmModal';
+import { apiFetch } from '../api';
 
 interface StudentsManagerProps {
     token: string;
@@ -44,15 +45,9 @@ export function StudentsManager({
         setIsLoading(true);
         try {
             let resp: Response;
-            try {
-                resp = await fetch('/teacher/students', {
+            resp = await apiFetch('/teacher/students', {
                     headers: { 'Authorization': token }
                 });
-            } catch {
-                resp = await fetch('http://10.0.10.52:8080/teacher/students', {
-                    headers: { 'Authorization': token }
-                });
-            }
             if (resp.ok) {
                 const data = await resp.json();
                 setStudents(data || []);
@@ -80,19 +75,11 @@ export function StudentsManager({
                 role: newRole
             };
             let resp: Response;
-            try {
-                resp = await fetch('/teacher/students', {
+            resp = await apiFetch('/teacher/students', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'Authorization': token },
                     body: JSON.stringify(payload)
                 });
-            } catch {
-                resp = await fetch('http://10.0.10.52:8080/teacher/students', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'Authorization': token },
-                    body: JSON.stringify(payload)
-                });
-            }
             if (!resp.ok) {
                 const err = await resp.json().catch(() => ({}));
                 throw new Error(err.error || `Server responded with ${resp.status}`);
@@ -118,17 +105,10 @@ export function StudentsManager({
                 setConfirmDialog(prev => ({ ...prev, isOpen: false }));
                 try {
                     let resp: Response;
-                    try {
-                        resp = await fetch(`/teacher/students/${st.uuid}`, {
+                    resp = await apiFetch(`/teacher/students/${st.uuid}`, {
                             method: 'DELETE',
                             headers: { 'Authorization': token }
                         });
-                    } catch {
-                        resp = await fetch(`http://10.0.10.52:8080/teacher/students/${st.uuid}`, {
-                            method: 'DELETE',
-                            headers: { 'Authorization': token }
-                        });
-                    }
                     if (!resp.ok) {
                         const err = await resp.json().catch(() => ({}));
                         throw new Error(err.error || `Server responded with ${resp.status}`);
@@ -149,19 +129,11 @@ export function StudentsManager({
         try {
             let resp: Response;
             const payload = { password: newResetPassword };
-            try {
-                resp = await fetch(`/teacher/students/${resetPasswordStudent.uuid}/reset-password`, {
+            resp = await apiFetch(`/teacher/students/${resetPasswordStudent.uuid}/reset-password`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'Authorization': token },
                     body: JSON.stringify(payload)
                 });
-            } catch {
-                resp = await fetch(`http://10.0.10.52:8080/teacher/students/${resetPasswordStudent.uuid}/reset-password`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'Authorization': token },
-                    body: JSON.stringify(payload)
-                });
-            }
             if (!resp.ok) {
                 const err = await resp.json().catch(() => ({}));
                 throw new Error(err.error || `Server responded with ${resp.status}`);
@@ -179,7 +151,7 @@ export function StudentsManager({
     const filteredStudents = students.filter(st => {
         if (!searchQuery.trim()) return true;
         const q = searchQuery.toLowerCase().trim();
-        return st.email.toLowerCase().includes(q) || (st.uuid || '').toLowerCase().includes(q);
+        return (st.email || '').toLowerCase().includes(q) || (st.uuid || '').toLowerCase().includes(q);
     });
 
     const totalStudents = students.filter(s => s.role !== 'teacher').length;

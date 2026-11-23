@@ -859,6 +859,12 @@ select option:disabled {
 }
 
 .project-badge {
+  color: var(--text-main);
+  font-family: inherit;
+  white-space: nowrap;
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -922,3 +928,173 @@ select option:disabled {
   flex-wrap: wrap;
 }
 
+
+/* ---- Classes referenced by components but previously undefined ---- */
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  padding-bottom: 12px;
+  margin-bottom: 4px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.modal-header h3,
+.modal-title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-main);
+}
+
+.close-button {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: background-color 0.12s ease, color 0.12s ease;
+}
+
+.close-button:hover {
+  background: var(--card-bg-subtle);
+  color: var(--text-main);
+  border-color: var(--border-color);
+}
+
+.stat-value {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--text-main);
+  line-height: 1.2;
+}
+
+.stat-label {
+  font-size: 11px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  margin-top: 2px;
+}
+
+/* ---- VM table: compact rows ---- */
+.vm-table td {
+  padding-top: 8px;
+  padding-bottom: 8px;
+}
+
+.row-actions {
+  flex-wrap: nowrap;
+  justify-content: flex-end;
+}
+
+.vm-table th:last-child {
+  text-align: right;
+}
+
+.row-menu-trigger {
+  width: 28px;
+  padding: 0;
+  font-size: 16px;
+  line-height: 1;
+}
+
+.row-menu {
+  position: fixed;
+  z-index: 1100;
+  width: 240px;
+  padding: 6px;
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
+  display: flex;
+  flex-direction: column;
+}
+
+.row-menu-item {
+  text-align: left;
+  padding: 7px 10px;
+  border: none;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--text-main);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.row-menu-item:hover:not(:disabled) {
+  background: var(--table-row-hover);
+}
+
+.row-menu-item:disabled {
+  color: var(--text-muted);
+  cursor: not-allowed;
+}
+
+.row-menu-item.danger {
+  color: var(--danger-text);
+}
+
+.row-menu-item.danger:hover:not(:disabled) {
+  background: var(--danger-subtle);
+}
+
+.row-menu-divider {
+  height: 1px;
+  margin: 4px 2px;
+  background: var(--border-subtle);
+}
+
+/* ---- Dismissable status message ---- */
+.message {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.message-close {
+  border: none;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font-size: 16px;
+  line-height: 1;
+  opacity: 0.7;
+  padding: 0 2px;
+}
+
+.message-close:hover {
+  opacity: 1;
+}
+
+/* Keep the actions column visible when the table scrolls horizontally */
+.vm-table th:last-child,
+.vm-table td:last-child {
+  position: sticky;
+  right: 0;
+  z-index: 1;
+  box-shadow: -8px 0 8px -8px rgba(0, 0, 0, 0.35);
+}
+
+.vm-table td:last-child {
+  background-color: var(--card-bg);
+}
+
+.vm-table th:last-child {
+  background-color: var(--table-header-bg);
+}
+
+.vm-table tbody tr:hover td:last-child {
+  background-color: var(--table-row-hover);
+}

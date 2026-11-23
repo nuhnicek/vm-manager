@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { main } from '../../wailsjs/go/models';
 import { ProxmoxNode } from '../types';
 import { ConfirmModal } from './ConfirmModal';
+import { apiFetch } from '../api';
 
 interface TemplatesManagerProps {
     templates: main.Template[];
@@ -55,19 +56,11 @@ export function TemplatesManager({
             const vmid = Number(idStr);
             const payload = { vmid, node: nodeName };
             let resp: Response;
-            try {
-                resp = await fetch('/vms/templates/convert', {
+            resp = await apiFetch('/vms/templates/convert', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'Authorization': token },
                     body: JSON.stringify(payload)
                 });
-            } catch {
-                resp = await fetch('http://10.0.10.52:8080/vms/templates/convert', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'Authorization': token },
-                    body: JSON.stringify(payload)
-                });
-            }
             if (!resp.ok) {
                 const err = await resp.json().catch(() => ({}));
                 throw new Error(err.error || `Failed with status ${resp.status}`);
@@ -101,19 +94,11 @@ export function TemplatesManager({
                 ram_mb: Number(cloneRAM)
             };
             let resp: Response;
-            try {
-                resp = await fetch('/vms/templates/clone-as-template', {
+            resp = await apiFetch('/vms/templates/clone-as-template', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'Authorization': token },
                     body: JSON.stringify(payload)
                 });
-            } catch {
-                resp = await fetch('http://10.0.10.52:8080/vms/templates/clone-as-template', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'Authorization': token },
-                    body: JSON.stringify(payload)
-                });
-            }
             if (!resp.ok) {
                 const err = await resp.json().catch(() => ({}));
                 throw new Error(err.error || `Failed with status ${resp.status}`);
@@ -141,19 +126,11 @@ export function TemplatesManager({
                 try {
                     let resp: Response;
                     const payload = { vmid: Number(tpl.id), node: tplNode };
-                    try {
-                        resp = await fetch('/vms/delete', {
+                    resp = await apiFetch('/vms/delete', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json', 'Authorization': token },
                             body: JSON.stringify(payload)
                         });
-                    } catch {
-                        resp = await fetch('http://10.0.10.52:8080/vms/delete', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json', 'Authorization': token },
-                            body: JSON.stringify(payload)
-                        });
-                    }
                     if (!resp.ok) {
                         const err = await resp.json().catch(() => ({}));
                         throw new Error(err.error || `Failed with status ${resp.status}`);
@@ -172,7 +149,7 @@ export function TemplatesManager({
         if (selectedNodeFilter && tplNode !== selectedNodeFilter) return false;
         if (searchQuery.trim()) {
             const q = searchQuery.toLowerCase().trim();
-            const matchName = tpl.name.toLowerCase().includes(q);
+            const matchName = (tpl.name || '').toLowerCase().includes(q);
             const matchId = String(tpl.id).includes(q);
             const matchNode = (tplNode || '').toLowerCase().includes(q);
             if (!matchName && !matchId && !matchNode) return false;

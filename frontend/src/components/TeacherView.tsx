@@ -7,6 +7,7 @@ import { FleetNodesView } from './FleetNodesView';
 import { StudentsManager } from './StudentsManager';
 import { ConfirmModal } from './ConfirmModal';
 import { NetworkTopologyModal } from './NetworkTopologyModal';
+import { apiFetch } from '../api';
 
 interface TeacherViewProps {
     token: string;
@@ -72,33 +73,21 @@ export function TeacherView({
         setIsLoading(true);
         try {
             let respTpl: Response;
-            try {
-                respTpl = await fetch('/labs/templates', { headers: { 'Authorization': token } });
-            } catch {
-                respTpl = await fetch('http://10.0.10.52:8080/labs/templates', { headers: { 'Authorization': token } });
-            }
+            respTpl = await apiFetch('/labs/templates', { headers: { 'Authorization': token } });
             if (respTpl.ok) {
                 const data = await respTpl.json();
                 setLabTemplates(data || []);
             }
 
             let respInst: Response;
-            try {
-                respInst = await fetch('/labs/instances', { headers: { 'Authorization': token } });
-            } catch {
-                respInst = await fetch('http://10.0.10.52:8080/labs/instances', { headers: { 'Authorization': token } });
-            }
+            respInst = await apiFetch('/labs/instances', { headers: { 'Authorization': token } });
             if (respInst.ok) {
                 const data = await respInst.json();
                 setLabInstances(data || []);
             }
 
             let respStudents: Response;
-            try {
-                respStudents = await fetch('/teacher/students', { headers: { 'Authorization': token } });
-            } catch {
-                respStudents = await fetch('http://10.0.10.52:8080/teacher/students', { headers: { 'Authorization': token } });
-            }
+            respStudents = await apiFetch('/teacher/students', { headers: { 'Authorization': token } });
             if (respStudents.ok) {
                 const stData = await respStudents.json();
                 setStudents(stData || []);
@@ -125,10 +114,10 @@ export function TeacherView({
     const filteredTemplates = useMemo(() => {
         return labTemplates.filter(lab => {
             const matchesSearch = 
-                lab.name.toLowerCase().includes(labTemplateSearch.toLowerCase()) ||
+                (lab.name || '').toLowerCase().includes(labTemplateSearch.toLowerCase()) ||
                 lab.description?.toLowerCase().includes(labTemplateSearch.toLowerCase()) ||
                 lab.category?.toLowerCase().includes(labTemplateSearch.toLowerCase()) ||
-                lab.vms?.some(v => v.name.toLowerCase().includes(labTemplateSearch.toLowerCase()));
+                lab.vms?.some(v => (v.name || '').toLowerCase().includes(labTemplateSearch.toLowerCase()));
             const matchesCat = selectedCategory === 'all' || lab.category === selectedCategory;
             return matchesSearch && matchesCat;
         });
@@ -137,10 +126,10 @@ export function TeacherView({
     const filteredInstances = useMemo(() => {
         return labInstances.filter(inst => {
             const matchesSearch =
-                inst.lab_name.toLowerCase().includes(instanceSearch.toLowerCase()) ||
-                inst.id.toLowerCase().includes(instanceSearch.toLowerCase()) ||
+                (inst.lab_name || '').toLowerCase().includes(instanceSearch.toLowerCase()) ||
+                (inst.id || '').toLowerCase().includes(instanceSearch.toLowerCase()) ||
                 (inst.owner_email && inst.owner_email.toLowerCase().includes(instanceSearch.toLowerCase())) ||
-                inst.vms?.some(v => v.name.toLowerCase().includes(instanceSearch.toLowerCase()) || String(v.vmid).includes(instanceSearch));
+                inst.vms?.some(v => (v.name || '').toLowerCase().includes(instanceSearch.toLowerCase()) || String(v.vmid).includes(instanceSearch));
             const matchesStatus =
                 instanceStatusFilter === 'all' ||
                 (instanceStatusFilter === 'running' && inst.status === 'running') ||
@@ -161,19 +150,11 @@ export function TeacherView({
                 lab_prefix: prefix
             };
             let resp: Response;
-            try {
-                resp = await fetch('/labs/deploy', {
+            resp = await apiFetch('/labs/deploy', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'Authorization': token },
                     body: JSON.stringify(payload)
                 });
-            } catch {
-                resp = await fetch('http://10.0.10.52:8080/labs/deploy', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'Authorization': token },
-                    body: JSON.stringify(payload)
-                });
-            }
             if (!resp.ok) {
                 const errData = await resp.json().catch(() => ({}));
                 throw new Error(errData.error || `Server responded with ${resp.status}`);
@@ -233,17 +214,10 @@ export function TeacherView({
     const handleStartInstance = async (id: string) => {
         try {
             let resp: Response;
-            try {
-                resp = await fetch(`/labs/instances/${id}/start`, {
+            resp = await apiFetch(`/labs/instances/${id}/start`, {
                     method: 'POST',
                     headers: { 'Authorization': token }
                 });
-            } catch {
-                resp = await fetch(`http://10.0.10.52:8080/labs/instances/${id}/start`, {
-                    method: 'POST',
-                    headers: { 'Authorization': token }
-                });
-            }
             if (resp.ok) {
                 onMessage(`Laboratorní instance ${id} byla spuštěna`);
                 await fetchLabs();
@@ -257,17 +231,10 @@ export function TeacherView({
     const handleStopInstance = async (id: string) => {
         try {
             let resp: Response;
-            try {
-                resp = await fetch(`/labs/instances/${id}/stop`, {
+            resp = await apiFetch(`/labs/instances/${id}/stop`, {
                     method: 'POST',
                     headers: { 'Authorization': token }
                 });
-            } catch {
-                resp = await fetch(`http://10.0.10.52:8080/labs/instances/${id}/stop`, {
-                    method: 'POST',
-                    headers: { 'Authorization': token }
-                });
-            }
             if (resp.ok) {
                 onMessage(`Laboratorní instance ${id} byla zastavena`);
                 await fetchLabs();
@@ -286,17 +253,10 @@ export function TeacherView({
                 setConfirmDialog(prev => ({ ...prev, isOpen: false }));
                 try {
                     let resp: Response;
-                    try {
-                        resp = await fetch(`/labs/instances/${id}`, {
+                    resp = await apiFetch(`/labs/instances/${id}`, {
                             method: 'DELETE',
                             headers: { 'Authorization': token }
                         });
-                    } catch {
-                        resp = await fetch(`http://10.0.10.52:8080/labs/instances/${id}`, {
-                            method: 'DELETE',
-                            headers: { 'Authorization': token }
-                        });
-                    }
                     if (resp.ok) {
                         onMessage(`Laboratorní instance ${id} byla smazána`);
                         await fetchLabs();
@@ -318,17 +278,10 @@ export function TeacherView({
                 setConfirmDialog(prev => ({ ...prev, isOpen: false }));
                 try {
                     let resp: Response;
-                    try {
-                        resp = await fetch(`/labs/templates/${id}`, {
+                    resp = await apiFetch(`/labs/templates/${id}`, {
                             method: 'DELETE',
                             headers: { 'Authorization': token }
                         });
-                    } catch {
-                        resp = await fetch(`http://10.0.10.52:8080/labs/templates/${id}`, {
-                            method: 'DELETE',
-                            headers: { 'Authorization': token }
-                        });
-                    }
                     if (resp.ok) {
                         onMessage(`Šablona laboratoře "${name}" byla odstraněna`);
                         await fetchLabs();

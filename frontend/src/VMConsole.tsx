@@ -2,9 +2,8 @@ import { useEffect, useRef, useState } from 'react';
 import { Terminal } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import RFB from '@novnc/novnc';
-import { GetBackendURL } from '../wailsjs/go/main/App';
 import { ClipboardSetText, ClipboardGetText } from '../wailsjs/runtime/runtime';
-import { apiFetch } from './api';
+import { apiFetch, getBackendBaseUrl } from './api';
 import { ExternalVNCModal } from './components/ExternalVNCModal';
 import '@xterm/xterm/css/xterm.css';
 
@@ -19,15 +18,7 @@ interface VMConsoleProps {
 
 async function resolveWebSocketUrl(vmId: string | number, tokenOverride: string | undefined, endpoint: 'vnc' | 'ws', vmNode?: string): Promise<string> {
     const token = tokenOverride || localStorage.getItem('vm_manager_token') || '';
-    let backendUrl = 'http://10.0.10.52:8080';
-    if (typeof window !== 'undefined' && (window as any).go?.main?.App?.GetBackendURL) {
-        try {
-            const configured = await GetBackendURL();
-            if (configured) {
-                backendUrl = configured;
-            }
-        } catch {}
-    }
+    const backendUrl = await getBackendBaseUrl();
 
     const wsProto = backendUrl.startsWith('https') ? 'wss:' : 'ws:';
     const host = backendUrl.replace(/^https?:\/\//, '');

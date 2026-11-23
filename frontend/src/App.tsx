@@ -82,6 +82,13 @@ function App() {
     const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
     const [isCheckingUpdate, setIsCheckingUpdate] = useState(false);
 
+    // Success messages auto-dismiss; errors stay until closed.
+    useEffect(() => {
+        if (!message || message.startsWith('Chyba')) return;
+        const t = setTimeout(() => setMessage(''), 5000);
+        return () => clearTimeout(t);
+    }, [message]);
+
     const refreshAppConfig = async () => {
         try {
             if (typeof window !== 'undefined' && (window as any).go?.main?.App?.GetAppConfig) {
@@ -980,8 +987,9 @@ function App() {
             />
 
             {message && (
-                <div className={`message ${message.startsWith('Chyba') ? 'error' : 'success'}`}>
-                    {message}
+                <div className={`message ${message.startsWith('Chyba') ? 'error' : 'success'}`} role="status">
+                    <span>{message}</span>
+                    <button type="button" className="message-close" onClick={() => setMessage('')} title="Zavřít">×</button>
                 </div>
             )}
 

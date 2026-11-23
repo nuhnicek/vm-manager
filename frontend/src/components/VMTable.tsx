@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { main } from '../../wailsjs/go/models';
 import { Project } from '../types';
 import { MoveVMToProjectModal } from './MoveVMToProjectModal';
@@ -28,6 +28,69 @@ interface VMTableProps {
     onConnectLabNetwork?: (vm: main.VM) => void;
     onDisconnectLabNetwork?: (vm: main.VM) => void;
     pendingActions?: Record<string, string>;
+}
+
+type RowMenuItem = { label: string; onClick: () => void; disabled?: boolean; danger?: boolean } | { divider: true };
+
+function RowMenu({ items }: { items: (RowMenuItem | false | null | undefined | '' | 0)[] }) {
+    const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
+    const btnRef = useRef<HTMLButtonElement>(null);
+    const menuRef = useRef<HTMLDivElement>(null);
+    const list = items.filter(Boolean) as RowMenuItem[];
+
+    useEffect(() => {
+        if (!pos) return;
+        const close = (e: Event) => {
+            if (e.type === 'keydown' && (e as KeyboardEvent).key !== 'Escape') return;
+            if (e.type === 'mousedown' && (menuRef.current?.contains(e.target as Node) || btnRef.current?.contains(e.target as Node))) return;
+            setPos(null);
+        };
+        document.addEventListener('mousedown', close);
+        document.addEventListener('keydown', close);
+        window.addEventListener('scroll', close, true);
+        window.addEventListener('resize', close);
+        return () => {
+            document.removeEventListener('mousedown', close);
+            document.removeEventListener('keydown', close);
+            window.removeEventListener('scroll', close, true);
+            window.removeEventListener('resize', close);
+        };
+    }, [pos]);
+
+    const toggle = () => {
+        if (pos) { setPos(null); return; }
+        const r = btnRef.current!.getBoundingClientRect();
+        const menuW = 240;
+        const menuH = list.length * 34 + 12;
+        const top = r.bottom + 4 + menuH > window.innerHeight ? Math.max(8, r.top - 4 - menuH) : r.bottom + 4;
+        setPos({ top, left: Math.max(8, Math.min(r.right - menuW, window.innerWidth - menuW - 8)) });
+    };
+
+    return (
+        <>
+            <button ref={btnRef} type="button" className="btn btn-secondary btn-sm row-menu-trigger" onClick={toggle} title="Další akce" aria-haspopup="menu" aria-expanded={!!pos}>
+                ⋯
+            </button>
+            {pos && (
+                <div ref={menuRef} className="row-menu" role="menu" style={{ top: pos.top, left: pos.left }}>
+                    {list.map((it, i) => 'divider' in it ? (
+                        <div key={i} className="row-menu-divider" />
+                    ) : (
+                        <button
+                            key={i}
+                            type="button"
+                            role="menuitem"
+                            className={`row-menu-item${it.danger ? ' danger' : ''}`}
+                            disabled={it.disabled}
+                            onClick={() => { setPos(null); it.onClick(); }}
+                        >
+                            {it.label}
+                        </button>
+                    ))}
+                </div>
+            )}
+        </>
+    );
 }
 
 export function VMTable({
@@ -171,9 +234,11 @@ export function VMTable({
 
         return list.map(vm => {
             const pendingAction = pendingActions[String(vm.id)];
-            const isStarting = pendingAction === 'starting';
-            const isStopping = pendingAction === 'stopping';
-            const isDeleting = pendingAction === 'deleting';
+            // App.tsx records these as 'start' | 'stop' | 'delete'
+            const isStarting = pendingAction === 'start';
+            const isStopping = pendingAction === 'stop';
+            const isDeleting = pendingAction === 'delete';
+            const isBusy = isStarting || isStopping || isDeleting;
             const isConnectingLab = pendingAction === 'lab_connect';
             const isDisconnectingLab = pendingAction === 'lab_disconnect';
             const isRunning = vm.status === 'Running' || vm.status === 'running';
@@ -397,11 +462,11 @@ export function VMTable({
                         </div>
                     </td>
                     <td>
-                        <div className="action-buttons">
+                        <div className="action-buttons row-actions">
                             {!isRunning ? (
                                 <button 
                                     className="btn btn-success btn-sm" 
-                                    disabled={isStarting || isStopping || isDeleting}
+                                    disabled={isBusy}
                                     onClick={() => onStartVM(String(vm.id), vm.name, (vm as any).node)}
                                 >
                                     {isStarting && <span className="btn-spinner" />}
@@ -410,30 +475,22 @@ export function VMTable({
                             ) : (
                                 <button 
                                     className="btn btn-warning btn-sm" 
-                                    disabled={isStarting || isStopping || isDeleting}
+                                    disabled={isBusy}
                                     onClick={() => onStopVM(String(vm.id), vm.name, (vm as any).node)}
                                 >
                                     {isStopping && <span className="btn-spinner" />}
                                     {isStopping ? 'Zastavování...' : 'Zastavit'}
                                 </button>
                             )}
-                            
+
                             <button 
                                 className="btn btn-primary btn-sm" 
+                                disabled={!isRunning || isBusy}
+                                title={isRunning ? 'Otevřít konzoli' : 'Stroj je zastaven'}
                                 onClick={() => onOpenConsole(String(vm.id), (vm as any).node)}
                             >
                                 Konzole
                             </button>
-
-                            {isRunning && (
-                                <button 
-                                    className="btn btn-secondary btn-sm" 
-                                    onClick={() => setExternalVNCVM(vm)}
-                                    title="Připojit se přes externí VNC klient"
-                                >
-                                    VNC Klient
-                                </button>
-                            )}
 
                             <button 
                                 className="btn btn-secondary btn-sm" 
@@ -442,89 +499,23 @@ export function VMTable({
                                 Síť
                             </button>
 
-                            {onConnectLabNetwork && onDisconnectLabNetwork && (
-                                (vm as any).has_internet ? (
-                                    <button 
-                                        className="btn btn-secondary btn-sm" 
-                                        disabled={isConnectingLab || isDisconnectingLab}
-                                        onClick={() => onDisconnectLabNetwork(vm)}
-                                        title="Odpojit od laboratorní sítě (Internet)"
-                                        style={{ fontSize: '11px', borderColor: 'rgba(239, 68, 68, 0.4)' }}
-                                    >
-                                        {isDisconnectingLab && <span className="btn-spinner" />}
-                                        {isDisconnectingLab ? 'Odpojování...' : 'Odpojit Lab'}
-                                    </button>
-                                ) : (vm as any).is_vulnerable ? (
-                                    <span 
-                                        style={{ 
-                                            fontSize: '11px', 
-                                            padding: '3px 8px', 
-                                            borderRadius: '4px', 
-                                            border: '1px solid rgba(239, 68, 68, 0.35)', 
-                                            color: '#ef4444', 
-                                            background: 'rgba(239, 68, 68, 0.08)',
-                                            userSelect: 'none',
-                                            fontWeight: 500
-                                        }}
-                                        title="Zranitelné stroje nelze z bezpečnostních důvodů připojit k internetu ani laboratorní síti"
-                                    >
-                                        Izolováno
-                                    </span>
-                                ) : (
-                                    <button 
-                                        className="btn btn-primary btn-sm" 
-                                        disabled={isConnectingLab || isDisconnectingLab}
-                                        onClick={() => onConnectLabNetwork(vm)}
-                                        title="Připojit stroj k laboratorní síti s internetem pro stahování balíčků a nástrojů"
-                                        style={{
-                                            fontSize: '11px',
-                                            background: (vm as any).is_attacker ? '#f97316' : undefined,
-                                            borderColor: (vm as any).is_attacker ? '#f97316' : undefined
-                                        }}
-                                    >
-                                        {isConnectingLab && <span className="btn-spinner" />}
-                                        {isConnectingLab ? 'Připojování...' : 'Připojit Lab Síť'}
-                                    </button>
-                                )
-                            )}
-
-                            {onSetIPClick && (
-                                <button 
-                                    className="btn btn-secondary btn-sm" 
-                                    onClick={() => onSetIPClick(vm)}
-                                    title="Změnit IP adresu"
-                                >
-                                    IP
-                                </button>
-                            )}
-
-                            {((vm as any).cve_id || vm.is_vulnerable) && (
-                                <button 
-                                    className="btn btn-secondary btn-sm" 
-                                    onClick={() => setSelectedCVEVM(vm)}
-                                    title="Zobrazit detail CVE a návod"
-                                    style={{ borderColor: 'rgba(239, 68, 68, 0.5)', color: '#ef4444' }}
-                                >
-                                    CVE Návod
-                                </button>
-                            )}
-
-                            <button 
-                                className="btn btn-secondary btn-sm" 
-                                onClick={() => setMovingVM(vm)}
-                                title="Přiřadit nebo přesunout do jiného projektu"
-                            >
-                                Projekt
-                            </button>
-                            
-                            <button 
-                                className="btn btn-danger btn-sm" 
-                                disabled={isDeleting || isStarting || isStopping}
-                                onClick={() => onDeleteVM(String(vm.id), vm.name, (vm as any).node)}
-                            >
-                                {isDeleting && <span className="btn-spinner" />}
-                                {isDeleting ? 'Mazání...' : 'Smazat'}
-                            </button>
+                            <RowMenu
+                                items={[
+                                    isRunning && { label: 'Externí VNC klient', onClick: () => setExternalVNCVM(vm) },
+                                    onConnectLabNetwork && onDisconnectLabNetwork && (
+                                        (vm as any).has_internet
+                                            ? { label: isDisconnectingLab ? 'Odpojování...' : 'Odpojit od Lab sítě', disabled: isConnectingLab || isDisconnectingLab, onClick: () => onDisconnectLabNetwork(vm) }
+                                            : (vm as any).is_vulnerable
+                                                ? { label: 'Lab síť: izolováno (zranitelný stroj)', disabled: true, onClick: () => {} }
+                                                : { label: isConnectingLab ? 'Připojování...' : 'Připojit k Lab síti (Internet)', disabled: isConnectingLab || isDisconnectingLab, onClick: () => onConnectLabNetwork(vm) }
+                                    ),
+                                    onSetIPClick && { label: 'Nastavit IP adresu', onClick: () => onSetIPClick(vm) },
+                                    ((vm as any).cve_id || vm.is_vulnerable) && { label: 'CVE návod', onClick: () => setSelectedCVEVM(vm) },
+                                    { label: 'Přesunout do projektu', onClick: () => setMovingVM(vm) },
+                                    { divider: true },
+                                    { label: isDeleting ? 'Mazání...' : 'Smazat stroj', danger: true, disabled: isBusy, onClick: () => onDeleteVM(String(vm.id), vm.name, (vm as any).node) },
+                                ]}
+                            />
                         </div>
                     </td>
                 </tr>
@@ -838,7 +829,7 @@ export function VMTable({
             </div>
 
             {activeProject && (
-                <div className="active-project-banner" style={{ borderLeftColor: activeProject.color || 'var(--primary-color)' }}>
+                <div className="project-banner" style={{ borderLeftColor: activeProject.color || 'var(--primary-color)' }}>
                     <div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                             <span style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: activeProject.color || 'var(--primary-color)' }}></span>
