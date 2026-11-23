@@ -600,11 +600,13 @@ export function VMConsole({ vmId, vmName, vmNode, token, onClose, onPopOut }: VM
                 display: 'flex',
                 justifyContent: 'space-between',
                 alignItems: 'center',
+                flexWrap: 'wrap',
+                gap: '8px',
                 borderBottom: '1px solid var(--border-color)',
                 userSelect: 'none'
             }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <div style={{ fontWeight: 600, fontSize: '13px', letterSpacing: '-0.01em' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap', minWidth: 0 }}>
+                    <div style={{ fontWeight: 600, fontSize: '13px', letterSpacing: '-0.01em', whiteSpace: 'nowrap' }}>
                         {vmName} <span className="mono-tag" style={{ marginLeft: '6px' }}>{vmId ? `VMID: ${vmId}` : 'Konzole'}</span>
                     </div>
 
@@ -655,7 +657,7 @@ export function VMConsole({ vmId, vmName, vmNode, token, onClose, onPopOut }: VM
                     </span>
                 </div>
 
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                     <button
                         type="button"
                         onClick={handleCopyVMClipboard}

@@ -14,7 +14,7 @@ A cross-platform desktop application for managing virtual machines and software-
 ## Key Features
 
 - **Live VM Fleet Management**: Real-time overview of assigned virtual machines, execution states (Running / Stopped), allocated memory, and attached VirtIO interfaces.
-- **Interactive Network Topology Map**: Dynamic graph rendered via Mermaid.js depicting VM nodes and their point-to-point NIC links (`net0 <-> net1`) in real time.
+- **Interactive Network Topology Map**: Lightweight SVG graph depicting VM nodes and their point-to-point NIC links (`net0 <-> net1`) in real time.
 - **Software-Defined Networking Controls**:
   - Connect two VMs together on dedicated, isolated VLAN tags with a few clicks.
   - Hot-add new VirtIO network interfaces (`net0` through `net31`).
@@ -35,7 +35,7 @@ flowchart LR
     subgraph Desktop["Lab411 Desktop Application (Wails v2)"]
         subgraph Webview["Frontend (React + Vite + TypeScript)"]
             UI["Dashboard & Modals"]
-            MermaidMap["Mermaid Network Topology"]
+            MermaidMap["SVG Network Topology"]
             ConsoleView["VNC (noVNC) & Serial (xterm.js)"]
         end
 
@@ -139,7 +139,7 @@ vm-manager/
     │   │   ├── Login.tsx                  # User authentication form
     │   │   ├── VMTable.tsx                # VM list with action controls
     │   │   ├── CreateVMCard.tsx           # Template clone dialog
-    │   │   ├── NetworkMap.tsx             # Mermaid.js topology renderer
+    │   │   ├── NetworkMap.tsx             # SVG topology renderer (no dependencies)
     │   │   ├── NetworkingModal.tsx        # Add/remove NICs & connect VMs
     │   │   └── NetworkTopologyModal.tsx   # Modal wrapper for network graph
     │   └── wailsjs/        # Auto-generated Go-to-TypeScript bindings

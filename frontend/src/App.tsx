@@ -1,11 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, lazy, Suspense } from 'react';
 import { 
     GetVMs, GetTemplates, StartVM, StopVM, DeleteVM, CreateVMFromTemplate, 
     GetLaunchedConsoleVM, GetConsoleParams, OpenConsole, ConnectVMs, DisconnectVMs, AddNIC, RemoveNIC,
     VerifySession, Logout, CheckForUpdate, GetAppConfig
 } from '../wailsjs/go/main/App';
 import { main } from '../wailsjs/go/models';
-import { VMConsole } from './VMConsole';
 import { Quit } from '../wailsjs/runtime/runtime';
 
 import { Header } from './components/Header';
@@ -27,6 +26,9 @@ import { ConfigModal } from './components/ConfigModal';
 import { apiFetch } from './api';
 
 import './App.css';
+
+// noVNC + xterm are only needed once a console is opened; keep them out of the startup bundle.
+const VMConsole = lazy(() => import('./VMConsole').then(m => ({ default: m.VMConsole })));
 
 function App() {
     const [theme, setTheme] = useState<'light' | 'dark'>(() => {
@@ -247,10 +249,10 @@ function App() {
         }
     };
 
-    const fetchVMs = async (tokenOverride?: string) => {
+    const fetchVMs = async (tokenOverride?: string, silent: boolean = false) => {
         const token = tokenOverride || authToken || localStorage.getItem('vm_manager_token') || '';
         if (!token) return;
-        setIsRefreshing(true);
+        if (!silent) setIsRefreshing(true);
         try {
             let data: main.VM[] = [];
             if (typeof window !== 'undefined' && (window as any).go?.main?.App?.GetVMs) {
@@ -316,41 +318,37 @@ function App() {
         }
     };
 
-    const triggerRefetch = () => {
-        fetchVMs();
+    const refreshAll = (silent: boolean = false) => {
+        fetchVMs(undefined, silent);
         fetchProjects();
         if (userRole === 'teacher') {
             fetchNodes();
         }
-        setTimeout(() => {
-            fetchVMs();
-            fetchProjects();
-            if (userRole === 'teacher') {
-                fetchNodes();
-            }
-        }, 1200);
-        setTimeout(() => {
-            fetchVMs();
-            fetchProjects();
-            if (userRole === 'teacher') {
-                fetchNodes();
-            }
-        }, 3000);
+    };
+
+    // After a mutation, refresh once after a short delay so Proxmox has time to
+    // report the new state (an immediate fetch would overwrite optimistic updates with stale data).
+    const triggerRefetch = () => {
+        setTimeout(() => refreshAll(), 1500);
     };
 
     useEffect(() => {
         if (!isAuthenticated) return;
+        // Background polling: silent, and paused while the window is hidden or a console is open.
         const interval = setInterval(() => {
-            if (!activeConsoleVM) {
-                fetchVMs();
-                fetchProjects();
-                if (userRole === 'teacher') {
-                    fetchNodes();
-                }
+            if (!activeConsoleVM && !document.hidden) {
+                refreshAll(true);
             }
         }, 8000);
-        return () => clearInterval(interval);
-    }, [isAuthenticated, userRole, activeConsoleVM]);
+        const onVisible = () => {
+            if (!document.hidden && !activeConsoleVM) refreshAll(true);
+        };
+        document.addEventListener('visibilitychange', onVisible);
+        return () => {
+            clearInterval(interval);
+            document.removeEventListener('visibilitychange', onVisible);
+        };
+    }, [isAuthenticated, userRole, activeConsoleVM, authToken]);
 
     const handleLoginSuccess = async (token: string, userEmail: string, role?: string) => {
         localStorage.setItem('vm_manager_token', token);
@@ -833,6 +831,7 @@ function App() {
     if (launchedConsoleVM) {
         return (
             <div style={{ width: '100vw', height: '100vh', backgroundColor: '#000000' }}>
+                <Suspense fallback={null}>
                 <VMConsole 
                     vmId={launchedConsoleParams?.id || launchedConsoleVM}
                     vmName={launchedConsoleParams?.name || launchedConsoleVM}
@@ -846,6 +845,7 @@ function App() {
                         }
                     }}
                 />
+                </Suspense>
             </div>
         );
     }
@@ -957,6 +957,7 @@ function App() {
             )}
 
             {activeConsoleVM && (
+                <Suspense fallback={null}>
                 <VMConsole 
                     vmId={activeConsoleVM.id} 
                     vmName={activeConsoleVM.name}
@@ -965,6 +966,7 @@ function App() {
                     onClose={() => setActiveConsoleVM(null)}
                     onPopOut={() => handlePopOutConsole(String(activeConsoleVM.id))}
                 />
+                </Suspense>
             )}
 
             <Header 
@@ -1025,7 +1027,7 @@ function App() {
                         selectedProjectId={selectedProjectId}
                         userRole={userRole}
                         isRefreshing={isRefreshing}
-                        onRefresh={triggerRefetch}
+                        onRefresh={() => refreshAll()}
                         onCreateVMClick={() => setIsCreateVMModalOpen(true)}
                         onStartVM={handleStartVM}
                         onStopVM={handleStopVM}
