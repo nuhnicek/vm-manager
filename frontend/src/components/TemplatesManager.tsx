@@ -317,7 +317,7 @@ export function TemplatesManager({
 
                 <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
                     <button 
-                        className={`btn btn-sm ${selectedNodeFilter === '' ? 'btn-primary' : 'btn-secondary'}`}
+                        className={`btn btn-sm ${selectedNodeFilter === '' ? 'btn-secondary is-selected' : 'btn-secondary'}`}
                         onClick={() => setSelectedNodeFilter('')}
                     >
                         Všechny uzly ({templates.length})
@@ -327,7 +327,7 @@ export function TemplatesManager({
                         return (
                             <button 
                                 key={n.name}
-                                className={`btn btn-sm ${selectedNodeFilter === n.name ? 'btn-primary' : 'btn-secondary'}`}
+                                className={`btn btn-sm ${selectedNodeFilter === n.name ? 'btn-secondary is-selected' : 'btn-secondary'}`}
                                 onClick={() => setSelectedNodeFilter(prev => prev === n.name ? '' : n.name)}
                             >
                                 {n.name} ({count})
@@ -375,7 +375,7 @@ export function TemplatesManager({
                                 <div style={{ display: 'flex', gap: '6px', alignItems: 'center', marginBottom: '12px', flexWrap: 'wrap' }}>
                                     <span className="status-badge status-running">
                                         <span className="status-badge-dot"></span>
-                                        PŘIPRAVENO
+                                        Připraveno
                                     </span>
                                     {tplNode && (
                                         <span className="mono-tag">

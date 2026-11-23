@@ -7,7 +7,7 @@ import {
 import { main } from '../wailsjs/go/models';
 import { Quit } from '../wailsjs/runtime/runtime';
 
-import { Header } from './components/Header';
+import { Sidebar, AppSection } from './components/Sidebar';
 import { Login } from './components/Login';
 import { CreateVMModal } from './components/CreateVMModal';
 import { VMTable } from './components/VMTable';
@@ -42,7 +42,7 @@ function App() {
     const [isVerifyingSession, setIsVerifyingSession] = useState(true);
     const [currentUser, setCurrentUser] = useState<string>('');
     const [userRole, setUserRole] = useState<string>('');
-    const [currentView, setCurrentView] = useState<'student' | 'teacher'>('student');
+    const [section, setSection] = useState<AppSection>('vms');
     const [authToken, setAuthToken] = useState<string>('');
 
     const [nodes, setNodes] = useState<ProxmoxNode[]>([]);
@@ -194,7 +194,7 @@ function App() {
                         if (savedRole) {
                             setUserRole(savedRole);
                             if (savedRole === 'teacher') {
-                                setCurrentView('teacher');
+                                setSection('labs');
                             }
                         }
                         await fetchVMs(savedToken);
@@ -357,7 +357,7 @@ function App() {
             localStorage.setItem('vm_manager_role', role);
             setUserRole(role);
             if (role === 'teacher') {
-                setCurrentView('teacher');
+                setSection('labs');
             }
         }
         setAuthToken(token);
@@ -393,6 +393,7 @@ function App() {
         setSelectedProjectId('all');
         setNodes([]);
         setSelectedNode('');
+        setSection('vms');
     };
 
     const executeAction = async (actionFn: (id: string) => Promise<string>, id: string, endpoint?: string, node?: string, actionType?: string) => {
@@ -882,7 +883,28 @@ function App() {
         : vms;
 
     return (
-        <div className="container">
+        <div className="app-shell">
+            <Sidebar
+                section={section}
+                onSectionChange={setSection}
+                isTeacher={userRole === 'teacher'}
+                vmCount={vms.length}
+                currentUser={currentUser}
+                userRole={userRole}
+                theme={theme}
+                onToggleTheme={toggleTheme}
+                onOpenNetworkMap={() => setShowNetworkMap(true)}
+                onLogout={handleLogout}
+                hasUpdate={Boolean(updateInfo?.has_update)}
+                updateVersion={updateInfo?.latest_version}
+                onOpenUpdate={() => setIsUpdateModalOpen(true)}
+                onCheckUpdate={() => checkForUpdates(true)}
+                isCheckingUpdate={isCheckingUpdate}
+                onOpenConfig={() => setIsConfigModalOpen(true)}
+                activeEnvName={activeEnvName}
+            />
+            <main className="main">
+            <div className="container">
             <ConfirmModal 
                 isOpen={confirmDialog.isOpen}
                 message={confirmDialog.message}
@@ -969,24 +991,6 @@ function App() {
                 </Suspense>
             )}
 
-            <Header 
-                theme={theme} 
-                onToggleTheme={toggleTheme} 
-                currentUser={currentUser}
-                userRole={userRole}
-                currentView={currentView}
-                onViewChange={setCurrentView}
-                onLogout={handleLogout}
-                showNetworkMap={showNetworkMap}
-                onToggleNetworkMap={() => setShowNetworkMap(prev => !prev)}
-                hasUpdate={Boolean(updateInfo?.has_update)}
-                updateVersion={updateInfo?.latest_version}
-                onOpenUpdate={() => setIsUpdateModalOpen(true)}
-                onCheckUpdate={() => checkForUpdates(true)}
-                isCheckingUpdate={isCheckingUpdate}
-                onOpenConfig={() => setIsConfigModalOpen(true)}
-                activeEnvName={activeEnvName}
-            />
 
             {message && (
                 <div className={`message ${message.startsWith('Chyba') ? 'error' : 'success'}`} role="status">
@@ -995,7 +999,7 @@ function App() {
                 </div>
             )}
 
-            {userRole === 'teacher' && currentView === 'teacher' ? (
+            {userRole === 'teacher' && section !== 'vms' ? (
                 <TeacherView 
                     token={authToken}
                     nodes={nodes}
@@ -1008,18 +1012,11 @@ function App() {
                     onStopVM={handleStopVM}
                     onDeleteVM={handleDeleteVM}
                     onOpenConsole={handleOpenConsole}
+                    activeTab={section as Exclude<AppSection, 'vms'>}
+                    onTabChange={setSection}
                 />
             ) : (
                 <>
-                    {userRole === 'teacher' && (
-                        <NodesCard 
-                            nodes={nodes}
-                            isRefreshing={isRefreshing}
-                            onRefresh={() => fetchNodes()}
-                            selectedNode={selectedNode}
-                            onSelectNode={setSelectedNode}
-                        />
-                    )}
 
                     <VMTable 
                         vms={filteredVMs}
@@ -1051,6 +1048,15 @@ function App() {
                         onConnectLabNetwork={(vm) => handleConnectLabNetwork(vm)}
                         onDisconnectLabNetwork={(vm) => handleDisconnectLabNetwork(vm)}
                         pendingActions={pendingVMActions}
+                        headerSlot={userRole === 'teacher' ? (
+                            <NodesCard 
+                                nodes={nodes}
+                                isRefreshing={isRefreshing}
+                                onRefresh={() => fetchNodes()}
+                                selectedNode={selectedNode}
+                                onSelectNode={setSelectedNode}
+                            />
+                        ) : undefined}
                     />
                 </>
             )}
@@ -1069,6 +1075,8 @@ function App() {
                     triggerRefetch();
                 }} 
             />
+            </div>
+            </main>
         </div>
     );
 }

@@ -21,9 +21,9 @@ export function NodesCard({ nodes, isRefreshing, onRefresh, selectedNode, onSele
         <div className="card">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '8px' }}>
                 <div>
-                    <h3 style={{ margin: 0 }}>Uzly Proxmox VE Clusteru ({nodes.length})</h3>
+                    <h3 style={{ margin: 0, fontSize: '16px' }}>Uzly clusteru ({nodes.length})</h3>
                     <p style={{ margin: '3px 0 0 0', fontSize: '13px', color: 'var(--text-muted)' }}>
-                        Fyzické hypervizory připojené do výpočetního poolu
+                        Kliknutím na uzel zobrazíte jen jeho stroje.
                     </p>
                 </div>
                 <button 
@@ -53,7 +53,7 @@ export function NodesCard({ nodes, isRefreshing, onRefresh, selectedNode, onSele
                                 </div>
                                 <span className={`status-badge ${isOnline ? 'status-running' : 'status-stopped'}`}>
                                     <span className="status-badge-dot"></span>
-                                    {isOnline ? 'ONLINE' : 'OFFLINE'}
+                                    {isOnline ? 'Online' : 'Offline'}
                                 </span>
                             </div>
                             <div style={{ fontSize: '12px', color: 'var(--text-muted)', display: 'flex', flexDirection: 'column', gap: '4px' }}>

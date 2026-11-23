@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useRef } from 'react';
+import { useState, useMemo, useEffect, useRef, ReactNode } from 'react';
 import { main } from '../../wailsjs/go/models';
 import { Project } from '../types';
 import { MoveVMToProjectModal } from './MoveVMToProjectModal';
@@ -28,6 +28,8 @@ interface VMTableProps {
     onConnectLabNetwork?: (vm: main.VM) => void;
     onDisconnectLabNetwork?: (vm: main.VM) => void;
     pendingActions?: Record<string, string>;
+    /** Rendered between the page header and the filters (e.g. the teacher's node picker). */
+    headerSlot?: ReactNode;
 }
 
 type RowMenuItem = { label: string; onClick: () => void; disabled?: boolean; danger?: boolean } | { divider: true };
@@ -117,6 +119,7 @@ export function VMTable({
     onConnectLabNetwork,
     onDisconnectLabNetwork,
     pendingActions = {},
+    headerSlot,
 }: VMTableProps) {
     const isTeacher = userRole === 'teacher';
     const [searchQuery, setSearchQuery] = useState('');
@@ -205,8 +208,8 @@ export function VMTable({
         if (list.length === 0) {
             return (
                 <tr>
-                    <td colSpan={isTeacher ? 9 : 7} className="text-center text-muted" style={{ padding: '24px' }}>
-                        <div>Nebyly nalezeny žádné virtuální stroje ani kontejnery pro toto zobrazení.</div>
+                    <td colSpan={isTeacher ? 8 : 6} className="text-center text-muted" style={{ padding: '24px' }}>
+                        <div>Tady zatím nic neběží. Nasaďte stroj z katalogu nebo ho vytvořte ze šablony.</div>
                         <div style={{ display: 'flex', gap: '8px', justifyContent: 'center', marginTop: '10px' }}>
                             {onOpenCatalogClick && (
                                 <button
@@ -214,7 +217,7 @@ export function VMTable({
                                     className="btn btn-primary btn-sm"
                                     onClick={onOpenCatalogClick}
                                 >
-                                    Otevřít katalog & rychlé kontejnery
+                                    Nasadit z katalogu
                                 </button>
                             )}
                             {onCreateVMClick && (
@@ -223,7 +226,7 @@ export function VMTable({
                                     className="btn btn-secondary btn-sm"
                                     onClick={onCreateVMClick}
                                 >
-                                    + Vytvořit ze šablony
+                                    Vytvořit ze šablony
                                 </button>
                             )}
                         </div>
@@ -249,223 +252,91 @@ export function VMTable({
             return (
                 <tr key={`${(vm as any).node || 'pve'}-${vm.id}`}>
                     <td>
-                        <span className="mono-tag" style={{ fontWeight: 600, color: 'var(--primary-color)' }}>
+                        <span className="port-plate" title={isRunning ? 'Běží' : 'Zastaveno'} aria-label={`${vm.id}, ${isRunning ? 'běží' : 'zastaveno'}`}>
+                            <span className={`led${isRunning ? ' on' : ''}`} />
                             {vm.id}
                         </span>
                     </td>
                     <td>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
-                            <span className="fw-500">{vm.name}</span>
-                            <span style={{
-                                fontSize: '10px',
-                                fontWeight: 700,
-                                padding: '2px 6px',
-                                borderRadius: '4px',
-                                background: isLXC ? 'rgba(59, 130, 246, 0.15)' : 'rgba(168, 85, 247, 0.15)',
-                                color: isLXC ? '#3b82f6' : '#a855f7'
-                            }}>
-                                {isLXC ? 'LXC' : 'VM'}
-                            </span>
+                        <div className="vm-name">{vm.name}</div>
+                        <div className="vm-tags">
+                            {(!isRunning || isStarting || isStopping) && (
+                                <span className="tag">{isStarting ? 'Spouští se…' : isStopping ? 'Zastavuje se…' : 'Zastaveno'}</span>
+                            )}
+                            {isLXC && <span className="tag kind">Kontejner</span>}
                             {(vm as any).cve_id ? (
-                                <button
-                                    type="button"
-                                    onClick={() => setSelectedCVEVM(vm)}
-                                    title="Zobrazit detail zranitelnosti a návod"
-                                    style={{
-                                        border: 'none',
-                                        cursor: 'pointer',
-                                        fontSize: '10px',
-                                        fontWeight: 700,
-                                        padding: '2px 6px',
-                                        borderRadius: '4px',
-                                        background: 'rgba(239, 68, 68, 0.15)',
-                                        color: '#ef4444'
-                                    }}
-                                >
-                                    {(vm as any).cve_id}
+                                <button type="button" className="tag danger" onClick={() => setSelectedCVEVM(vm)} title="Zobrazit detail zranitelnosti a návod">
+                                    {(vm as any).cve_id}{(vm as any).cvss ? ` · CVSS ${(vm as any).cvss}` : ''}
                                 </button>
                             ) : vm.is_vulnerable ? (
-                                <span style={{
-                                    fontSize: '10px',
-                                    fontWeight: 700,
-                                    padding: '2px 6px',
-                                    borderRadius: '4px',
-                                    background: 'rgba(239, 68, 68, 0.15)',
-                                    color: '#ef4444'
-                                }}>
-                                    ZRANITELNÝ
-                                </span>
+                                <span className="tag danger">Zranitelný</span>
                             ) : null}
-                            {(vm as any).cvss && (
-                                <span style={{
-                                    fontSize: '10px',
-                                    fontWeight: 700,
-                                    padding: '2px 6px',
-                                    borderRadius: '4px',
-                                    background: 'rgba(245, 158, 11, 0.15)',
-                                    color: '#f59e0b'
-                                }}>
-                                    {(vm as any).cvss}
-                                </span>
-                            )}
-                            {(vm as any).is_attacker && (
-                                <span style={{
-                                    fontSize: '10px',
-                                    fontWeight: 700,
-                                    padding: '2px 6px',
-                                    borderRadius: '4px',
-                                    background: 'rgba(249, 115, 22, 0.15)',
-                                    color: '#f97316'
-                                }}>
-                                    ÚTOČNÍK
-                                </span>
-                            )}
-                            {(vm as any).has_internet && (
-                                <span style={{
-                                    fontSize: '10px',
-                                    fontWeight: 700,
-                                    padding: '2px 6px',
-                                    borderRadius: '4px',
-                                    background: 'rgba(16, 185, 129, 0.15)',
-                                    color: '#10b981'
-                                }}>
-                                    INTERNET
-                                </span>
-                            )}
+                            {(vm as any).is_attacker && <span className="tag warn">Útočník</span>}
                         </div>
                     </td>
                     <td>
                         {projName ? (
-                            <button
-                                type="button"
-                                className="project-badge"
-                                onClick={() => setMovingVM(vm)}
-                                title="Kliknutím změníte projekt stroje"
-                                style={{ borderColor: projColor }}
-                            >
-                                <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: projColor, display: 'inline-block' }}></span>
-                                <span>{projName}</span>
+                            <button type="button" className="project-badge" onClick={() => setMovingVM(vm)} title="Změnit projekt">
+                                <span style={{ width: '4px', height: '14px', borderRadius: '2px', backgroundColor: projColor, flexShrink: 0 }}></span>
+                                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{projName}</span>
                             </button>
                         ) : (
-                            <button
-                                type="button"
-                                className="project-badge text-muted"
-                                onClick={() => setMovingVM(vm)}
-                                title="Kliknutím přiřadíte stroj k projektu"
-                                style={{ borderStyle: 'dashed' }}
-                            >
-                                + Přiřadit projekt
+                            <button type="button" className="project-badge text-muted" onClick={() => setMovingVM(vm)} title="Přiřadit k projektu">
+                                Přiřadit
                             </button>
                         )}
                     </td>
                     {isTeacher && (
-                        <td>
-                            <span className="mono-tag">
-                                {(vm as any).node || 'pve'}
-                            </span>
-                        </td>
+                        <td><span className="mono">{(vm as any).node || 'pve'}</span></td>
                     )}
                     {isTeacher && (
-                        <td style={{ fontSize: '12px', fontFamily: 'monospace', color: 'var(--text-muted)' }}>
-                            {(vm as any).owner ? (vm as any).owner.slice(0, 8) + '...' : 'Systém'}
+                        <td className="mono text-muted" title={(vm as any).owner || ''}>
+                            {(vm as any).owner ? (vm as any).owner.slice(0, 8) : 'systém'}
                         </td>
                     )}
                     <td>
-                        <span className={`status-badge ${isRunning ? 'status-running' : 'status-stopped'}`}>
-                            {isRunning ? 'BĚŽÍ' : 'ZASTAVENO'}
-                        </span>
-                    </td>
-                    <td>
                         {vm.ip_address ? (
-                            <div>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                    <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#10b981', flexShrink: 0 }}></span>
-                                    <span style={{ fontFamily: 'monospace', fontSize: '12px', fontWeight: 600 }}>{vm.ip_address}</span>
-                                    <button
-                                        type="button"
-                                        onClick={() => navigator.clipboard.writeText(vm.ip_address!)}
-                                        title="Zkopírovat IP adresu do schránky"
-                                        style={{ border: 'none', background: 'transparent', cursor: 'pointer', padding: '2px', color: 'var(--text-muted)', display: 'inline-flex' }}
-                                    >
-                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-                                            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-                                        </svg>
-                                    </button>
-                                    {onSetIPClick && (
-                                        <button
-                                            type="button"
-                                            onClick={() => onSetIPClick(vm)}
-                                            title="Upravit konfiguraci IP"
-                                            style={{ border: 'none', background: 'transparent', cursor: 'pointer', padding: '2px', color: 'var(--text-muted)', display: 'inline-flex' }}
-                                        >
-                                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
-                                                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
-                                            </svg>
-                                        </button>
-                                    )}
-                                </div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
+                                <span className="ip" style={{ marginRight: '4px' }}>{vm.ip_address}</span>
+                                <button type="button" className="icon-btn" onClick={() => navigator.clipboard.writeText(vm.ip_address!)} title="Zkopírovat IP adresu"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="9" y="9" width="13" height="13" rx="2" /><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" /></svg></button>
+                                {onSetIPClick && <button type="button" className="icon-btn" onClick={() => onSetIPClick(vm)} title="Upravit IP adresu"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" /></svg></button>}
                                 {vm.configured_ip && vm.configured_ip.toLowerCase() !== 'dhcp' && vm.configured_ip !== vm.ip_address && (
-                                    <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '2px' }}>
-                                        konfig: {vm.configured_ip}
-                                    </div>
+                                    <span className="text-muted" style={{ fontSize: '12px', marginLeft: '6px' }}>nastaveno {vm.configured_ip}</span>
                                 )}
                             </div>
                         ) : vm.configured_ip ? (
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                <span style={{ fontFamily: 'monospace', fontSize: '12px', color: 'var(--text-muted)' }}>{vm.configured_ip}</span>
-                                {onSetIPClick && (
-                                    <button
-                                        type="button"
-                                        onClick={() => onSetIPClick(vm)}
-                                        title="Upravit IP adresu"
-                                        style={{ border: 'none', background: 'transparent', cursor: 'pointer', padding: '2px', color: 'var(--text-muted)', display: 'inline-flex' }}
-                                    >
-                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
-                                            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
-                                        </svg>
-                                    </button>
-                                )}
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
+                                <span className="ip text-muted" style={{ marginRight: '4px' }}>{vm.configured_ip.toLowerCase() === 'dhcp' ? 'DHCP' : vm.configured_ip}</span>
+                                {onSetIPClick && <button type="button" className="icon-btn" onClick={() => onSetIPClick(vm)} title="Upravit IP adresu"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" /></svg></button>}
                             </div>
                         ) : onSetIPClick ? (
-                            <button
-                                type="button"
-                                className="btn btn-secondary btn-sm"
-                                style={{ fontSize: '11px', padding: '2px 8px' }}
-                                onClick={() => onSetIPClick(vm)}
-                            >
-                                + Nastavit IP
-                            </button>
+                            <button type="button" className="btn btn-secondary btn-sm" onClick={() => onSetIPClick(vm)}>Nastavit IP</button>
                         ) : (
-                            <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>-</span>
+                            <span className="text-muted">–</span>
                         )}
                     </td>
                     <td>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', fontSize: '13px', whiteSpace: 'nowrap' }}>
                             {(vm as any).has_internet && (
-                                <span style={{ fontSize: '11px', color: '#10b981', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                    <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#10b981', flexShrink: 0 }}></span>
-                                    <span>Lab Síť (Internet)</span>
+                                <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                    <span className="led on" />Internet
                                 </span>
                             )}
-                            {vm.connections && vm.connections.length > 0 ? (
-                                vm.connections.map((conn, idx) => (
-                                    <span key={idx} style={{ fontSize: '11px', fontFamily: 'monospace', color: 'var(--text-muted)' }}>
-                                        &rarr; VM {conn.target_vm_id} ({conn.local_nic} &harr; {conn.target_nic})
-                                    </span>
-                                ))
-                            ) : !(vm as any).has_internet ? (
-                                <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Bez propojení</span>
-                            ) : null}
+                            {(vm.connections || []).map((conn, idx) => (
+                                <span key={idx} className="mono text-muted" style={{ fontSize: '12px' }}>
+                                    {conn.local_nic} ↔ VM {conn.target_vm_id}:{conn.target_nic}
+                                </span>
+                            ))}
+                            {!(vm as any).has_internet && !(vm.connections || []).length && (
+                                <span className="text-muted">–</span>
+                            )}
                         </div>
                     </td>
                     <td>
                         <div className="action-buttons row-actions">
                             {!isRunning ? (
                                 <button 
-                                    className="btn btn-success btn-sm" 
+                                    className="btn btn-secondary btn-sm" 
                                     disabled={isBusy}
                                     onClick={() => onStartVM(String(vm.id), vm.name, (vm as any).node)}
                                 >
@@ -474,7 +345,7 @@ export function VMTable({
                                 </button>
                             ) : (
                                 <button 
-                                    className="btn btn-warning btn-sm" 
+                                    className="btn btn-secondary btn-sm" 
                                     disabled={isBusy}
                                     onClick={() => onStopVM(String(vm.id), vm.name, (vm as any).node)}
                                 >
@@ -484,7 +355,7 @@ export function VMTable({
                             )}
 
                             <button 
-                                className="btn btn-primary btn-sm" 
+                                className="btn btn-secondary btn-sm" 
                                 disabled={!isRunning || isBusy}
                                 title={isRunning ? 'Otevřít konzoli' : 'Stroj je zastaven'}
                                 onClick={() => onOpenConsole(String(vm.id), (vm as any).node)}
@@ -524,7 +395,7 @@ export function VMTable({
     };
 
     return (
-        <div className="card">
+        <section>
             {movingVM && (
                 <MoveVMToProjectModal 
                     isOpen={movingVM !== null}
@@ -648,7 +519,7 @@ export function VMTable({
                                     fontSize: '13px',
                                     lineHeight: 1.5
                                 }}>
-                                    <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '6px' }}>
+                                    <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'none', marginBottom: '6px' }}>
                                         Popis a vektor zranitelnosti
                                     </div>
                                     <div>{(selectedCVEVM as any).exploit_doc}</div>
@@ -658,7 +529,7 @@ export function VMTable({
                             {(selectedCVEVM as any).exploit_hint && (
                                 <div style={{ marginBottom: '16px' }}>
                                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                                        <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase' }}>
+                                        <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'none' }}>
                                             Příkaz pro ověření / PoC
                                         </div>
                                         <button
@@ -731,53 +602,34 @@ export function VMTable({
                 </div>
             )}
 
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '8px' }}>
+            <div className="page-head">
                 <div>
-                    <h3 style={{ margin: 0 }}>Virtuální stroje a kontejnery ({filteredVMs.length})</h3>
-                    <p style={{ margin: '3px 0 0 0', fontSize: '13px', color: 'var(--text-muted)' }}>
-                        Správa vašich instancí, LXC kontejnerů a bezpečnostních laboratoří
-                    </p>
+                    <h1>Moje stroje</h1>
+                    <p>{filteredVMs.length === vms.length ? `${vms.length} strojů` : `${filteredVMs.length} z ${vms.length} strojů`} · {vms.filter(v => /run/i.test(v.status || '')).length} běží</p>
                 </div>
-                <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
-                    {onOpenCatalogClick && (
-                        <button
-                            type="button"
-                            className="btn btn-primary btn-sm"
-                            onClick={onOpenCatalogClick}
-                            style={{ background: 'linear-gradient(135deg, #2563eb 0%, #7c3aed 100%)', border: 'none' }}
-                            title="Rychlé nasazení LXC kontejnerů a zranitelných cílů"
-                        >
-                            Katalog & Kontejnery
-                        </button>
-                    )}
-                    {onCreateVMClick && (
-                        <button 
-                            type="button"
-                            className="btn btn-secondary btn-sm"
-                            onClick={onCreateVMClick}
-                            title="Vytvořit nový virtuální stroj ze šablony"
-                        >
-                            + Vytvořit VM
-                        </button>
-                    )}
-                    <button 
-                        type="button"
-                        className={`btn btn-sm ${isGroupedView ? 'btn-primary' : 'btn-secondary'}`}
-                        onClick={() => setIsGroupedView(prev => !prev)}
-                        title="Přepnout seskupení strojů podle projektů"
-                    >
-                        {isGroupedView ? 'Zobrazit tabulku' : 'Seskupit dle projektů'}
-                    </button>
-                    <button 
-                        className="btn btn-secondary btn-sm" 
-                        onClick={onRefresh} 
-                        title="Znovu načíst VM z Proxmoxu"
+                <div className="page-head-actions">
+                    <button
+                        className="btn btn-secondary"
+                        onClick={onRefresh}
+                        title="Znovu načíst stroje z Proxmoxu"
                         disabled={isRefreshing}
                     >
-                        {isRefreshing ? 'Obnovování...' : 'Obnovit'}
+                        {isRefreshing ? 'Načítám…' : 'Obnovit'}
                     </button>
+                    {onCreateVMClick && (
+                        <button type="button" className="btn btn-secondary" onClick={onCreateVMClick}>
+                            Vytvořit ze šablony
+                        </button>
+                    )}
+                    {onOpenCatalogClick && (
+                        <button type="button" className="btn btn-primary" onClick={onOpenCatalogClick} title="Kontejnery, zranitelné cíle a nástroje připravené k nasazení">
+                            Nasadit z katalogu
+                        </button>
+                    )}
                 </div>
             </div>
+
+            {headerSlot}
 
             <div className="project-nav-bar">
                 <div className="project-tab-list">
@@ -805,7 +657,6 @@ export function VMTable({
                             type="button"
                             className={`project-tab-btn ${selectedProjectId === p.id ? 'active' : ''}`}
                             onClick={() => onSelectProject && onSelectProject(p.id)}
-                            style={selectedProjectId === p.id && p.color ? { borderColor: p.color, color: p.color } : {}}
                         >
                             <span 
                                 className="project-tab-dot" 
@@ -820,10 +671,10 @@ export function VMTable({
                 {onCreateProjectClick && (
                     <button 
                         type="button"
-                        className="btn btn-primary btn-sm"
+                        className="btn btn-secondary btn-sm"
                         onClick={onCreateProjectClick}
                     >
-                        + Nový projekt
+                        Nový projekt
                     </button>
                 )}
             </div>
@@ -876,58 +727,26 @@ export function VMTable({
                 </div>
             )}
 
-            <div style={{ display: 'flex', gap: '12px', marginBottom: '14px', flexWrap: 'wrap', alignItems: 'center' }}>
-                <div style={{ flex: 1, minWidth: '240px' }}>
-                    <input 
-                        type="text"
-                        className="search-input"
-                        placeholder="Hledat podle názvu, VMID, IP adresy, projektu nebo uzlu..."
-                        value={searchQuery}
-                        onChange={e => setSearchQuery(e.target.value)}
-                        style={{ width: '100%' }}
-                    />
+            <div className="filter-bar">
+                <input 
+                    type="text"
+                    className="search-input"
+                    placeholder="Hledat název, VMID, IP, projekt nebo uzel"
+                    value={searchQuery}
+                    onChange={e => setSearchQuery(e.target.value)}
+                    style={{ flex: '1 1 240px' }}
+                    aria-label="Hledat stroje"
+                />
+                <div className="segmented" role="group" aria-label="Typ stroje">
+                    {([['all', 'Vše'], ['qemu', 'VM'], ['lxc', 'Kontejnery'], ['cve', 'CVE laboratoře'], ['vulnerable', 'Zranitelné']] as const).map(([k, label]) => (
+                        <button key={k} type="button" className={typeFilter === k ? 'active' : ''} onClick={() => setTypeFilter(k)} aria-pressed={typeFilter === k}>
+                            {label}
+                        </button>
+                    ))}
                 </div>
-                <div style={{ display: 'flex', gap: '6px' }}>
-                    <button
-                        type="button"
-                        onClick={() => setTypeFilter('all')}
-                        className={`btn btn-sm ${typeFilter === 'all' ? 'btn-primary' : 'btn-secondary'}`}
-                        style={{ fontSize: '12px', padding: '5px 10px' }}
-                    >
-                        Vše
-                    </button>
-                    <button
-                        type="button"
-                        onClick={() => setTypeFilter('qemu')}
-                        className={`btn btn-sm ${typeFilter === 'qemu' ? 'btn-primary' : 'btn-secondary'}`}
-                        style={{ fontSize: '12px', padding: '5px 10px' }}
-                    >
-                        Virtuální stroje
-                    </button>
-                    <button
-                        type="button"
-                        onClick={() => setTypeFilter('lxc')}
-                        className={`btn btn-sm ${typeFilter === 'lxc' ? 'btn-primary' : 'btn-secondary'}`}
-                        style={{ fontSize: '12px', padding: '5px 10px' }}
-                    >
-                        Kontejnery (LXC)
-                    </button>
-                    <button
-                        type="button"
-                        onClick={() => setTypeFilter('cve')}
-                        className={`btn btn-sm ${typeFilter === 'cve' ? 'btn-primary' : 'btn-secondary'}`}
-                        style={{ fontSize: '12px', padding: '5px 10px' }}
-                    >
-                        CVE laboratoře
-                    </button>
-                    <button
-                        type="button"
-                        onClick={() => setTypeFilter('vulnerable')}
-                        className={`btn btn-sm ${typeFilter === 'vulnerable' ? 'btn-primary' : 'btn-secondary'}`}
-                        style={{ fontSize: '12px', padding: '5px 10px' }}
-                    >
-                        Zranitelné cíle
-                    </button>
+                <div className="segmented" role="group" aria-label="Zobrazení">
+                    <button type="button" className={!isGroupedView ? 'active' : ''} onClick={() => setIsGroupedView(false)} aria-pressed={!isGroupedView}>Seznam</button>
+                    <button type="button" className={isGroupedView ? 'active' : ''} onClick={() => setIsGroupedView(true)} aria-pressed={isGroupedView}>Podle projektů</button>
                 </div>
             </div>
 
@@ -973,14 +792,13 @@ export function VMTable({
                                     <table className="vm-table">
                                         <thead>
                                             <tr>
-                                                <th>VMID</th>
-                                                <th>Název</th>
+                                                <th>Port</th>
+                                                <th>Stroj</th>
                                                 <th>Projekt</th>
                                                 {isTeacher && <th>Uzel</th>}
                                                 {isTeacher && <th>Vlastník</th>}
-                                                <th>Stav</th>
-                                                <th>IP Adresa</th>
-                                                <th>Síťová propojení</th>
+                                                                                                <th>IP adresa</th>
+                                                <th>Propojení</th>
                                                 <th>Akce</th>
                                             </tr>
                                         </thead>
@@ -998,14 +816,13 @@ export function VMTable({
                     <table className="vm-table">
                         <thead>
                             <tr>
-                                <th>VMID</th>
-                                <th>Název</th>
+                                <th>Port</th>
+                                <th>Stroj</th>
                                 <th>Projekt</th>
                                 {isTeacher && <th>Uzel</th>}
                                 {isTeacher && <th>Vlastník</th>}
-                                <th>Stav</th>
-                                <th>IP Adresa</th>
-                                <th>Síťová propojení</th>
+                                                                <th>IP adresa</th>
+                                <th>Propojení</th>
                                 <th>Akce</th>
                             </tr>
                         </thead>
@@ -1015,6 +832,6 @@ export function VMTable({
                     </table>
                 </div>
             )}
-        </div>
+        </section>
     );
 }

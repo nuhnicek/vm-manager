@@ -620,7 +620,7 @@ export function VMConsole({ vmId, vmName, vmNode, token, onClose, onPopOut }: VM
                         <button
                             type="button"
                             onClick={() => setConsoleMode('vnc')}
-                            className={`btn btn-sm ${consoleMode === 'vnc' ? 'btn-primary' : 'btn-secondary'}`}
+                            className={`btn btn-sm ${consoleMode === 'vnc' ? 'btn-secondary is-selected' : 'btn-secondary'}`}
                             style={{ border: 'none' }}
                             title="Grafická obrazovka (vhodné pro EVE-NG, Windows a další systémy)"
                         >
@@ -629,7 +629,7 @@ export function VMConsole({ vmId, vmName, vmNode, token, onClose, onPopOut }: VM
                         <button
                             type="button"
                             onClick={() => setConsoleMode('serial')}
-                            className={`btn btn-sm ${consoleMode === 'serial' ? 'btn-primary' : 'btn-secondary'}`}
+                            className={`btn btn-sm ${consoleMode === 'serial' ? 'btn-secondary is-selected' : 'btn-secondary'}`}
                             style={{ border: 'none' }}
                             title="Textový sériový terminál (pro Linux getty)"
                         >
@@ -767,7 +767,7 @@ export function VMConsole({ vmId, vmName, vmNode, token, onClose, onPopOut }: VM
                             <button
                                 type="button"
                                 onClick={() => handlePerformanceModeChange('low-latency')}
-                                className={`btn btn-sm ${performanceMode === 'low-latency' ? 'btn-primary' : 'btn-secondary'}`}
+                                className={`btn btn-sm ${performanceMode === 'low-latency' ? 'btn-secondary is-selected' : 'btn-secondary'}`}
                                 style={{ fontSize: '11px', padding: '2px 8px', border: 'none' }}
                                 title="Nízká latence pro plynulý obraz s hardwarovým blittingem"
                             >
@@ -776,7 +776,7 @@ export function VMConsole({ vmId, vmName, vmNode, token, onClose, onPopOut }: VM
                             <button
                                 type="button"
                                 onClick={() => handlePerformanceModeChange('balanced')}
-                                className={`btn btn-sm ${performanceMode === 'balanced' ? 'btn-primary' : 'btn-secondary'}`}
+                                className={`btn btn-sm ${performanceMode === 'balanced' ? 'btn-secondary is-selected' : 'btn-secondary'}`}
                                 style={{ fontSize: '11px', padding: '2px 8px', border: 'none' }}
                                 title="Vyvážený poměr odezvy a spotřeby přenosu"
                             >
@@ -785,7 +785,7 @@ export function VMConsole({ vmId, vmName, vmNode, token, onClose, onPopOut }: VM
                             <button
                                 type="button"
                                 onClick={() => handlePerformanceModeChange('bandwidth')}
-                                className={`btn btn-sm ${performanceMode === 'bandwidth' ? 'btn-primary' : 'btn-secondary'}`}
+                                className={`btn btn-sm ${performanceMode === 'bandwidth' ? 'btn-secondary is-selected' : 'btn-secondary'}`}
                                 style={{ fontSize: '11px', padding: '2px 8px', border: 'none' }}
                                 title="Vysoká komprese šetřící přenosová data"
                             >
@@ -807,7 +807,7 @@ export function VMConsole({ vmId, vmName, vmNode, token, onClose, onPopOut }: VM
                             <button
                                 type="button"
                                 onClick={() => handleScaleModeChange('fit')}
-                                className={`btn btn-sm ${scaleMode === 'fit' ? 'btn-primary' : 'btn-secondary'}`}
+                                className={`btn btn-sm ${scaleMode === 'fit' ? 'btn-secondary is-selected' : 'btn-secondary'}`}
                                 style={{ fontSize: '11px', padding: '2px 8px', border: 'none' }}
                                 title="Přizpůsobit okno velikosti obrazovky"
                             >
@@ -816,7 +816,7 @@ export function VMConsole({ vmId, vmName, vmNode, token, onClose, onPopOut }: VM
                             <button
                                 type="button"
                                 onClick={() => handleScaleModeChange('1:1')}
-                                className={`btn btn-sm ${scaleMode === '1:1' ? 'btn-primary' : 'btn-secondary'}`}
+                                className={`btn btn-sm ${scaleMode === '1:1' ? 'btn-secondary is-selected' : 'btn-secondary'}`}
                                 style={{ fontSize: '11px', padding: '2px 8px', border: 'none' }}
                                 title="Původní 1:1 rozlišení bez softwarového škálování"
                             >
@@ -829,7 +829,7 @@ export function VMConsole({ vmId, vmName, vmNode, token, onClose, onPopOut }: VM
                         <button
                             type="button"
                             onClick={handleToggleDotCursor}
-                            className={`btn btn-sm ${showDotCursor ? 'btn-primary' : 'btn-secondary'}`}
+                            className={`btn btn-sm ${showDotCursor ? 'btn-secondary is-selected' : 'btn-secondary'}`}
                             style={{ fontSize: '11px', padding: '2px 10px' }}
                             title="Zapnout nebo vypnout okamžitý lokální bod kurzoru myši"
                         >
@@ -996,7 +996,7 @@ export function VMConsole({ vmId, vmName, vmNode, token, onClose, onPopOut }: VM
                                 padding: '14px 16px'
                             }}>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                                    <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-main)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                                    <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-main)', textTransform: 'none', letterSpacing: '0.05em' }}>
                                         Schránka z virtuálního stroje
                                     </span>
                                     <button
@@ -1053,7 +1053,7 @@ export function VMConsole({ vmId, vmName, vmNode, token, onClose, onPopOut }: VM
 
                             <div>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                                    <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-main)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                                    <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-main)', textTransform: 'none', letterSpacing: '0.05em' }}>
                                         Vložit text do virtuálního stroje
                                     </span>
                                     <button

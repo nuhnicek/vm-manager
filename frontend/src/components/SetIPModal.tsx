@@ -191,7 +191,7 @@ export function SetIPModal({ isOpen, vm, onClose, onSuccess }: SetIPModalProps) 
                         marginBottom: '16px'
                     }}>
                         <div style={{ flex: 1 }}>
-                            <div style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                            <div style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'none', letterSpacing: '0.05em' }}>
                                 Typ stroje
                             </div>
                             <div style={{ fontSize: '13px', fontWeight: 600, marginTop: '2px' }}>
@@ -199,7 +199,7 @@ export function SetIPModal({ isOpen, vm, onClose, onSuccess }: SetIPModalProps) 
                             </div>
                         </div>
                         <div style={{ flex: 1 }}>
-                            <div style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                            <div style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'none', letterSpacing: '0.05em' }}>
                                 Runtime detekovaná IP
                             </div>
                             <div style={{ fontSize: '13px', fontWeight: 600, marginTop: '2px', color: vm.ip_address ? 'var(--primary-color)' : 'var(--text-muted)' }}>

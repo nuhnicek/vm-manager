@@ -129,7 +129,7 @@ export function ExternalVNCModal({ isOpen, vmId, vmName, vmNode, onClose }: Exte
 
                             <div style={{ marginBottom: '16px' }}>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                                    <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase' }}>
+                                    <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'none' }}>
                                         Příkaz pro spuštění v terminálu
                                     </span>
                                     <button

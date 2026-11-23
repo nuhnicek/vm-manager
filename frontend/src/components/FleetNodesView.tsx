@@ -240,7 +240,7 @@ export function FleetNodesView({
                             <strong style={{ fontSize: '14px' }}>{node.name}</strong>
                             <span className={`status-badge ${node.status === 'online' ? 'status-running' : 'status-stopped'}`}>
                                 <span className="status-badge-dot"></span>
-                                {node.status === 'online' ? 'ONLINE' : 'OFFLINE'}
+                                {node.status === 'online' ? 'Online' : 'Offline'}
                             </span>
                         </div>
                         <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
@@ -263,19 +263,19 @@ export function FleetNodesView({
 
                 <div style={{ display: 'flex', gap: '4px' }}>
                     <button 
-                        className={`btn btn-sm ${statusFilter === 'all' ? 'btn-primary' : 'btn-secondary'}`}
+                        className={`btn btn-sm ${statusFilter === 'all' ? 'btn-secondary is-selected' : 'btn-secondary'}`}
                         onClick={() => setStatusFilter('all')}
                     >
                         Vše ({fleetVMs.length})
                     </button>
                     <button 
-                        className={`btn btn-sm ${statusFilter === 'running' ? 'btn-primary' : 'btn-secondary'}`}
+                        className={`btn btn-sm ${statusFilter === 'running' ? 'btn-secondary is-selected' : 'btn-secondary'}`}
                         onClick={() => setStatusFilter('running')}
                     >
                         Běží ({runningCount})
                     </button>
                     <button 
-                        className={`btn btn-sm ${statusFilter === 'stopped' ? 'btn-primary' : 'btn-secondary'}`}
+                        className={`btn btn-sm ${statusFilter === 'stopped' ? 'btn-secondary is-selected' : 'btn-secondary'}`}
                         onClick={() => setStatusFilter('stopped')}
                     >
                         Zastaveno ({stoppedCount})
@@ -332,7 +332,7 @@ export function FleetNodesView({
                                     <td>
                                         <span className={`status-badge ${isRunning ? 'status-running' : 'status-stopped'}`}>
                                             <span className="status-badge-dot"></span>
-                                            {isRunning ? 'BĚŽÍ' : 'ZASTAVENO'}
+                                            {isRunning ? 'Běží' : 'Zastaveno'}
                                         </span>
                                     </td>
                                     <td>{vm.ram_mb ? `${vm.ram_mb} MB` : '-'}</td>

@@ -220,7 +220,7 @@ export function CatalogModal({
                                 <button
                                     type="button"
                                     onClick={() => setActiveTab('all')}
-                                    className={`btn ${activeTab === 'all' ? 'btn-primary' : 'btn-secondary'}`}
+                                    className={`btn ${activeTab === 'all' ? 'btn-secondary is-selected' : 'btn-secondary'}`}
                                     style={{ fontSize: '12px', padding: '6px 12px' }}
                                 >
                                     Vše
@@ -228,7 +228,7 @@ export function CatalogModal({
                                 <button
                                     type="button"
                                     onClick={() => setActiveTab('cve')}
-                                    className={`btn ${activeTab === 'cve' ? 'btn-primary' : 'btn-secondary'}`}
+                                    className={`btn ${activeTab === 'cve' ? 'btn-secondary is-selected' : 'btn-secondary'}`}
                                     style={{ fontSize: '12px', padding: '6px 12px' }}
                                 >
                                     Zranitelná CVE (Vulhub)
@@ -236,7 +236,7 @@ export function CatalogModal({
                                 <button
                                     type="button"
                                     onClick={() => setActiveTab('lxc')}
-                                    className={`btn ${activeTab === 'lxc' ? 'btn-primary' : 'btn-secondary'}`}
+                                    className={`btn ${activeTab === 'lxc' ? 'btn-secondary is-selected' : 'btn-secondary'}`}
                                     style={{ fontSize: '12px', padding: '6px 12px' }}
                                 >
                                     Rychlé kontejnery (LXC)
@@ -244,7 +244,7 @@ export function CatalogModal({
                                 <button
                                     type="button"
                                     onClick={() => setActiveTab('vuln')}
-                                    className={`btn ${activeTab === 'vuln' ? 'btn-primary' : 'btn-secondary'}`}
+                                    className={`btn ${activeTab === 'vuln' ? 'btn-secondary is-selected' : 'btn-secondary'}`}
                                     style={{ fontSize: '12px', padding: '6px 12px' }}
                                 >
                                     Zranitelné cíle
@@ -252,7 +252,7 @@ export function CatalogModal({
                                 <button
                                     type="button"
                                     onClick={() => setActiveTab('sec')}
-                                    className={`btn ${activeTab === 'sec' ? 'btn-primary' : 'btn-secondary'}`}
+                                    className={`btn ${activeTab === 'sec' ? 'btn-secondary is-selected' : 'btn-secondary'}`}
                                     style={{ fontSize: '12px', padding: '6px 12px' }}
                                 >
                                     Bezpečnostní nástroje
@@ -425,7 +425,7 @@ export function CatalogModal({
                             marginBottom: '16px'
                         }}>
                             <div>
-                                <div style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase' }}>
+                                <div style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'none' }}>
                                     Vybraná předloha
                                 </div>
                                 <div style={{ fontSize: '15px', fontWeight: 600, marginTop: '2px' }}>

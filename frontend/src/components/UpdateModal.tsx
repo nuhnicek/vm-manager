@@ -135,7 +135,7 @@ export function UpdateModal({ isOpen, onClose, updateInfo }: UpdateModalProps) {
                     marginBottom: '16px'
                 }}>
                     <div>
-                        <div style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--text-muted)' }}>
+                        <div style={{ fontSize: '11px', textTransform: 'none', letterSpacing: '0.5px', color: 'var(--text-muted)' }}>
                             Aktuální verze
                         </div>
                         <div style={{ fontWeight: 600, fontSize: '14px' }}>
@@ -149,7 +149,7 @@ export function UpdateModal({ isOpen, onClose, updateInfo }: UpdateModalProps) {
                     </svg>
 
                     <div>
-                        <div style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--text-muted)' }}>
+                        <div style={{ fontSize: '11px', textTransform: 'none', letterSpacing: '0.5px', color: 'var(--text-muted)' }}>
                             Nová verze
                         </div>
                         <div style={{ fontWeight: 600, fontSize: '14px', color: '#10b981' }}>
@@ -159,7 +159,7 @@ export function UpdateModal({ isOpen, onClose, updateInfo }: UpdateModalProps) {
 
                     {updateInfo.asset_size > 0 && (
                         <div>
-                            <div style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--text-muted)' }}>
+                            <div style={{ fontSize: '11px', textTransform: 'none', letterSpacing: '0.5px', color: 'var(--text-muted)' }}>
                                 Velikost
                             </div>
                             <div style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>

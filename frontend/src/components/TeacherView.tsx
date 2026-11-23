@@ -21,7 +21,12 @@ interface TeacherViewProps {
     onStopVM?: (id: string, name: string, node?: string) => void;
     onDeleteVM?: (id: string, name: string, node?: string) => void;
     onOpenConsole?: (id: string, node?: string) => void;
+    /** When provided, tab navigation is driven by the app sidebar. */
+    activeTab?: TeacherTab;
+    onTabChange?: (tab: TeacherTab) => void;
 }
+
+export type TeacherTab = 'labs' | 'templates' | 'fleet' | 'students';
 
 export function TeacherView({
     token,
@@ -34,9 +39,13 @@ export function TeacherView({
     onStartVM,
     onStopVM,
     onDeleteVM,
-    onOpenConsole
+    onOpenConsole,
+    activeTab: controlledTab,
+    onTabChange
 }: TeacherViewProps) {
-    const [activeTab, setActiveTab] = useState<'labs' | 'templates' | 'fleet' | 'students'>('labs');
+    const [localTab, setLocalTab] = useState<TeacherTab>('labs');
+    const activeTab = controlledTab ?? localTab;
+    const setActiveTab = (t: TeacherTab) => (onTabChange ? onTabChange(t) : setLocalTab(t));
     const [labTemplates, setLabTemplates] = useState<LabTemplate[]>([]);
     const [labInstances, setLabInstances] = useState<LabInstance[]>([]);
     const [students, setStudents] = useState<TeacherStudentInfo[]>([]);
@@ -430,7 +439,21 @@ export function TeacherView({
                 </div>
             )}
 
-            <div className="nav-tabs">
+            {onTabChange && (
+                <div className="page-head">
+                    <div>
+                        <h1>{{ labs: 'Laboratoře', students: 'Třída a studenti', templates: 'Šablony', fleet: 'Cluster a uzly' }[activeTab]}</h1>
+                        <p>{{
+                            labs: 'Scénáře, které můžete nasadit studentům, a laboratoře, které právě běží.',
+                            students: 'Účty studentů, jejich stroje a nasazené laboratoře.',
+                            templates: 'Základní obrazy, ze kterých se klonují stroje a laboratoře.',
+                            fleet: 'Uzly Proxmoxu a všechny stroje napříč clusterem.',
+                        }[activeTab]}</p>
+                    </div>
+                </div>
+            )}
+
+            {!onTabChange && <div className="nav-tabs">
                 <button 
                     className={`nav-tab-btn ${activeTab === 'labs' ? 'active' : ''}`}
                     onClick={() => setActiveTab('labs')}
@@ -455,7 +478,7 @@ export function TeacherView({
                 >
                     Třída a studenti ({students.length})
                 </button>
-            </div>
+            </div>}
 
             {activeTab === 'labs' && (
                 <div>
@@ -514,7 +537,7 @@ export function TeacherView({
                             {categories.length > 0 && (
                                 <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
                                     <button 
-                                        className={`btn btn-sm ${selectedCategory === 'all' ? 'btn-primary' : 'btn-secondary'}`}
+                                        className={`btn btn-sm ${selectedCategory === 'all' ? 'btn-secondary is-selected' : 'btn-secondary'}`}
                                         onClick={() => setSelectedCategory('all')}
                                     >
                                         Všechny kategorie
@@ -522,7 +545,7 @@ export function TeacherView({
                                     {categories.map(cat => (
                                         <button 
                                             key={cat}
-                                            className={`btn btn-sm ${selectedCategory === cat ? 'btn-primary' : 'btn-secondary'}`}
+                                            className={`btn btn-sm ${selectedCategory === cat ? 'btn-secondary is-selected' : 'btn-secondary'}`}
                                             onClick={() => setSelectedCategory(cat)}
                                         >
                                             {cat}
@@ -546,8 +569,8 @@ export function TeacherView({
                                     <div>
                                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
                                             <strong style={{ fontSize: '16px', color: 'var(--text-main)' }}>{lab.name}</strong>
-                                            <span className="mono-tag" style={{ textTransform: 'uppercase', color: 'var(--warning-text)', fontWeight: 600 }}>
-                                                {lab.difficulty}
+                                            <span className="mono-tag" style={{ textTransform: 'none', color: 'var(--warning-text)', fontWeight: 600 }}>
+                                                {({ easy: 'Snadná', medium: 'Střední', hard: 'Náročná' } as Record<string, string>)[(lab.difficulty || '').toLowerCase()] || lab.difficulty}
                                             </span>
                                         </div>
 
@@ -560,8 +583,8 @@ export function TeacherView({
                                         </p>
 
                                         <div style={{ marginBottom: '12px' }}>
-                                            <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '6px' }}>
-                                                Stroje v topologii ({lab.vms?.length || 0}):
+                                            <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'none', marginBottom: '6px' }}>
+                                                Stroje v topologii ({lab.vms?.length || 0})
                                             </div>
                                             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
                                                 {lab.vms?.map((vm, i) => (
@@ -574,7 +597,7 @@ export function TeacherView({
 
                                         {lab.networks && lab.networks.length > 0 && (
                                             <div style={{ marginBottom: '14px' }}>
-                                                <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '6px' }}>
+                                                <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'none', marginBottom: '6px' }}>
                                                     Spoje a segmenty ({lab.networks.length}):
                                                 </div>
                                                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
@@ -637,19 +660,19 @@ export function TeacherView({
                             />
                             <div style={{ display: 'flex', gap: '6px' }}>
                                 <button 
-                                    className={`btn btn-sm ${instanceStatusFilter === 'all' ? 'btn-primary' : 'btn-secondary'}`}
+                                    className={`btn btn-sm ${instanceStatusFilter === 'all' ? 'btn-secondary is-selected' : 'btn-secondary'}`}
                                     onClick={() => setInstanceStatusFilter('all')}
                                 >
                                     Vše
                                 </button>
                                 <button 
-                                    className={`btn btn-sm ${instanceStatusFilter === 'running' ? 'btn-primary' : 'btn-secondary'}`}
+                                    className={`btn btn-sm ${instanceStatusFilter === 'running' ? 'btn-secondary is-selected' : 'btn-secondary'}`}
                                     onClick={() => setInstanceStatusFilter('running')}
                                 >
                                     Běží ({runningInstancesCount})
                                 </button>
                                 <button 
-                                    className={`btn btn-sm ${instanceStatusFilter === 'stopped' ? 'btn-primary' : 'btn-secondary'}`}
+                                    className={`btn btn-sm ${instanceStatusFilter === 'stopped' ? 'btn-secondary is-selected' : 'btn-secondary'}`}
                                     onClick={() => setInstanceStatusFilter('stopped')}
                                 >
                                     Zastaveno ({labInstances.length - runningInstancesCount})
@@ -687,7 +710,7 @@ export function TeacherView({
                                             </td>
                                             <td>
                                                 <span className={`status-badge ${inst.status === 'running' ? 'status-running' : 'status-stopped'}`}>
-                                                    {inst.status === 'running' ? 'BĚŽÍ' : 'PŘIPRAVENO'}
+                                                    {inst.status === 'running' ? 'Běží' : 'Připraveno'}
                                                 </span>
                                             </td>
                                             <td>

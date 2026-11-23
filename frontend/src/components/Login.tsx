@@ -84,16 +84,13 @@ export function Login({ onLoginSuccess, onOpenConfig, activeEnvName, backendUrl 
         <div className="login-container">
             <div className="card login-card">
                 <div className="login-header">
-                    <div style={{ display: 'inline-flex', padding: '10px', background: 'var(--card-bg-subtle)', borderRadius: '6px', border: '1px solid var(--border-color)', marginBottom: '12px', color: 'var(--primary-color)' }}>
-                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <rect x="2" y="2" width="20" height="8" rx="2" ry="2"></rect>
-                            <rect x="2" y="14" width="20" height="8" rx="2" ry="2"></rect>
-                            <line x1="6" y1="6" x2="6.01" y2="6"></line>
-                            <line x1="6" y1="18" x2="6.01" y2="18"></line>
-                        </svg>
+                    <div className="sidebar-brand-mark" aria-hidden="true" style={{ gridTemplateColumns: 'repeat(3, 7px)', gap: '4px' }}>
+                        {['on', 'on', 'amber', 'on', '', 'on'].map((c, i) => (
+                            <span key={i} className={c} style={{ width: 7, height: 7 }} />
+                        ))}
                     </div>
-                    <h2>Správce Virtuálních Strojů</h2>
-                    <p>Přihlášení do výukového laboratorního prostředí</p>
+                    <h2>Lab411</h2>
+                    <p>Přihlaste se ke svým laboratorním strojům.</p>
                 </div>
 
                 {error && (
@@ -104,12 +101,12 @@ export function Login({ onLoginSuccess, onOpenConfig, activeEnvName, backendUrl 
 
                 <form className="login-form" onSubmit={handleSubmit}>
                     <div className="form-group">
-                        <label>Uživatelské jméno nebo e-mail</label>
+                        <label>E-mail nebo uživatelské jméno</label>
                         <input 
                             type="text" 
                             value={email} 
                             onChange={(e) => setEmail(e.target.value)} 
-                            placeholder="admin nebo ucitel@skola.cz"
+                            placeholder="jmeno@skola.cz"
                             required
                             disabled={isLoading}
                             autoFocus
@@ -122,7 +119,7 @@ export function Login({ onLoginSuccess, onOpenConfig, activeEnvName, backendUrl 
                             type="password" 
                             value={password} 
                             onChange={(e) => setPassword(e.target.value)} 
-                            placeholder="heslo"
+                            
                             required
                             disabled={isLoading}
                         />
@@ -133,13 +130,10 @@ export function Login({ onLoginSuccess, onOpenConfig, activeEnvName, backendUrl 
                         className="btn btn-primary login-btn"
                         disabled={isLoading}
                     >
-                        {isLoading ? 'Ověřování přihlášení...' : 'Přihlásit se'}
+                        {isLoading ? 'Přihlašuji…' : 'Přihlásit se'}
                     </button>
                 </form>
 
-                <div className="login-hint">
-                    Přihlaste se svými školními přístupovými údaji.
-                </div>
 
                 <div style={{
                     marginTop: '16px',
@@ -148,11 +142,11 @@ export function Login({ onLoginSuccess, onOpenConfig, activeEnvName, backendUrl 
                     display: 'flex',
                     justifyContent: 'space-between',
                     alignItems: 'center',
-                    fontSize: '12px',
-                    opacity: 0.85
+                    fontSize: '13px',
+                    color: 'var(--text-muted)'
                 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                        <span style={{ display: 'inline-block', width: '8px', height: '8px', borderRadius: '50%', background: '#10b981' }}></span>
+                        <span className="led on" />
                         <span>Prostředí: <strong>{activeEnvName || 'Lab 411'}</strong></span>
                     </div>
                     {onOpenConfig && (
@@ -162,14 +156,15 @@ export function Login({ onLoginSuccess, onOpenConfig, activeEnvName, backendUrl 
                             style={{
                                 background: 'transparent',
                                 border: 'none',
-                                color: 'var(--primary-color)',
+                                color: 'var(--text-main)',
                                 cursor: 'pointer',
-                                fontSize: '12px',
+                                fontSize: '13px',
                                 textDecoration: 'underline',
+                                textUnderlineOffset: '3px',
                                 padding: 0
                             }}
                         >
-                            ⚙️ Nastavení (config.json)
+                            Změnit prostředí
                         </button>
                     )}
                 </div>
