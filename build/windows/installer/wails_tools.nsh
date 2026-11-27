@@ -14,7 +14,7 @@
     !define INFO_PRODUCTNAME "Lab411 VM Manager"
 !endif
 !ifndef INFO_PRODUCTVERSION
-    !define INFO_PRODUCTVERSION "1.0.1"
+    !define INFO_PRODUCTVERSION "1.0.3"
 !endif
 !ifndef INFO_COPYRIGHT
     !define INFO_COPYRIGHT "Copyright 2026 Lab411"
